@@ -86,7 +86,7 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc")
 
   const [tableSortField, setTableSortField] = useState<
-    "ID" | "studentName" | "grade" | "className" | "email" | "phone" | "schoolName" | "ward"
+    "ID" | "studentName" | "parentOfStudentName" | "grade" | "className" | "email" | "phone" | "schoolName" | "ward"
   >("ID")
   const [tableSortDirection, setTableSortDirection] = useState<"asc" | "desc">("asc")
 
@@ -322,12 +322,6 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
     const sorted = [...filteredDeals].sort((a, b) => {
       let aValue = a[tableSortField] || ""
       let bValue = b[tableSortField] || ""
-
-      // Handle student name fallback
-      if (tableSortField === "studentName") {
-        aValue = a.studentName || a.parentOfStudentName || ""
-        bValue = b.studentName || b.parentOfStudentName || ""
-      }
 
       // Convert to lowercase for string comparison
       if (typeof aValue === "string") aValue = aValue.toLowerCase()
@@ -571,7 +565,7 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
     // Prepare data for Excel export
     const excelData = filteredDeals.map((deal) => ({
       "ID": deal.ID || "",
-      "Tên học sinh": deal.studentName || deal.parentOfStudentName || "",
+      "Tên học sinh": deal.studentName || "",
       "Tên phụ huynh": deal.parentOfStudentName || "",
       "Khối": deal.grade || "",
       "Lớp": deal.className || "",
@@ -1303,6 +1297,7 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
                       <tr className="border-b bg-muted/50">
                         {renderTableSortableHeader("ID", "ID")}
                         {renderTableSortableHeader("studentName", "Học sinh")}
+                        {renderTableSortableHeader("parentOfStudentName", "Tên phụ huynh")}
                         {renderTableSortableHeader("grade", "Khối")}
                         {renderTableSortableHeader("className", "Lớp")}
                         {renderTableSortableHeader("email", "Email")}
@@ -1315,7 +1310,8 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
                       {currentDeals.map((deal) => (
                         <tr key={deal.ID} className="border-b hover:bg-muted/50">
                           <td className="p-2 text-sm">{deal.ID}</td>
-                          <td className="p-2 text-sm">{deal.studentName || deal.parentOfStudentName || "-"}</td>
+                          <td className="p-2 text-sm">{deal.studentName || "-"}</td>
+                          <td className="p-2 text-sm">{deal.parentOfStudentName || "-"}</td>
                           <td className="p-2 text-sm">{deal.grade || "-"}</td>
                           <td className="p-2 text-sm">{deal.className || "-"}</td>
                           <td className="p-2 text-sm">{deal.email || "-"}</td>
