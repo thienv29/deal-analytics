@@ -6,6 +6,10 @@ import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Progress } from "@/components/ui/progress"
+import { Calendar } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { cn } from "@/lib/utils"
+import { format } from "date-fns"
 import * as EmailValidator from 'email-validator';
 import {
   RefreshCw,
@@ -22,6 +26,7 @@ import {
   Loader2,
   ChevronLeft,
   ChevronRight,
+  CalendarIcon,
 } from "lucide-react"
 import * as XLSX from 'xlsx'
 import { Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Line, ComposedChart } from "recharts"
@@ -69,6 +74,8 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
   const [duplicateEmailFilter, setDuplicateEmailFilter] = useState(false)
   const [emailValidityFilter, setEmailValidityFilter] = useState<'all' | 'valid' | 'invalid'>('all')
   const [schoolValidityFilter, setSchoolValidityFilter] = useState<'all' | 'valid' | 'invalid_empty'>('all')
+  const [startDateFilter, setStartDateFilter] = useState<Date | undefined>()
+  const [endDateFilter, setEndDateFilter] = useState<Date | undefined>()
 
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(50)
@@ -169,9 +176,39 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
       })
     }
 
+    // Date filtering
+    if (startDateFilter || endDateFilter) {
+      filtered = filtered.filter((deal) => {
+        if (!deal.DATE_CREATE) return false
+
+        try {
+          // Parse the date string "2025-09-15T11:44:52+07:00"
+          const dealDate = new Date(deal.DATE_CREATE)
+          if (isNaN(dealDate.getTime())) return false
+
+          if (startDateFilter) {
+            const start = new Date(startDateFilter)
+            start.setHours(0, 0, 0, 0)
+            if (dealDate < start) return false
+          }
+
+          if (endDateFilter) {
+            const end = new Date(endDateFilter)
+            end.setHours(23, 59, 59, 999)
+            if (dealDate > end) return false
+          }
+
+          return true
+        } catch (error) {
+          console.error("Error parsing date:", deal.DATE_CREATE, error)
+          return false
+        }
+      })
+    }
+
     setFilteredDeals(filtered)
     setCurrentPage(1)
-  }, [deals, searchQuery, gradeFilter, schoolFilter, wardFilter, schoolWardPairFilter, duplicateEmailFilter, emailValidityFilter, schoolValidityFilter])
+  }, [deals, searchQuery, gradeFilter, schoolFilter, wardFilter, schoolWardPairFilter, duplicateEmailFilter, emailValidityFilter, schoolValidityFilter, startDateFilter, endDateFilter])
 
   useEffect(() => {
     if (isInitialLoad) {
@@ -269,6 +306,8 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
     setDuplicateEmailFilter(false)
     setEmailValidityFilter('all')
     setSchoolValidityFilter('all')
+    setStartDateFilter(undefined)
+    setEndDateFilter(undefined)
     setCurrentPage(1)
   }
 
@@ -372,10 +411,7 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
           return {
             date,
             deals: count,
-            formattedDate: dateObj.toLocaleDateString("vi-VN", {
-              day: "2-digit",
-              month: "2-digit",
-            }),
+            formattedDate: format(dateObj, "dd/MM"),
             sortDate: dateObj.getTime(),
           }
         } catch (error) {
@@ -545,7 +581,7 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
       "Phường/Quận": deal.ward || "",
       "Địa chỉ": deal.address || "",
       "Ngày tạo": deal.DATE_CREATE || "",
-    }))
+    })) as Record<string, string>[]
 
     // Create worksheet
     const ws = XLSX.utils.json_to_sheet(excelData)
@@ -918,6 +954,50 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
                       </SelectContent>
                     </Select>
                   </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Từ ngày</label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-[280px] justify-start text-left font-normal",
+                            !startDateFilter && "text-muted-foreground"
+                          )}
+                          data-empty={!startDateFilter}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {startDateFilter ? format(startDateFilter, "PPP") : <span>Chọn ngày bắt đầu</span>}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <Calendar mode="single" selected={startDateFilter} onSelect={setStartDateFilter} />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Đến ngày</label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-[280px] justify-start text-left font-normal",
+                            !endDateFilter && "text-muted-foreground"
+                          )}
+                          data-empty={!endDateFilter}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {endDateFilter ? format(endDateFilter, "PPP") : <span>Chọn ngày kết thúc</span>}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <Calendar mode="single" selected={endDateFilter} onSelect={setEndDateFilter} />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-4 mt-6 pt-4 border-t">
@@ -933,7 +1013,9 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
                     schoolWardPairFilter ||
                     duplicateEmailFilter ||
                     emailValidityFilter !== 'all' ||
-                    schoolValidityFilter !== 'all') && (
+                    schoolValidityFilter !== 'all' ||
+                    startDateFilter ||
+                    endDateFilter) && (
                     <div className="flex flex-wrap items-center gap-2 text-sm">
                       <span className="text-muted-foreground font-medium">Đang lọc:</span>
                       {schoolWardPairFilter && schoolWardPairFilter !== "all" && (
@@ -984,6 +1066,16 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
                       {searchQuery && (
                         <span className="bg-gray-100 text-gray-800 px-3 py-1 rounded-full text-xs font-medium">
                           "{searchQuery}"
+                        </span>
+                      )}
+                      {startDateFilter && (
+                        <span className="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-xs font-medium">
+                          Từ {format(startDateFilter, "dd/MM/yyyy")}
+                        </span>
+                      )}
+                      {endDateFilter && (
+                        <span className="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-xs font-medium">
+                          Đến {format(endDateFilter, "dd/MM/yyyy")}
                         </span>
                       )}
                     </div>
