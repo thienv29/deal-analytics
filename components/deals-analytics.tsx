@@ -893,7 +893,7 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
                       <SelectContent>
                         <SelectItem value="all">Tất cả khối</SelectItem>
                         {filterOptions.grades.map((grade) => (
-                          <SelectItem key={grade} value={grade}>
+                          <SelectItem key={grade} value={grade || '-'}>
                             {grade}
                           </SelectItem>
                         ))}
@@ -931,7 +931,7 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
                       <SelectContent>
                         <SelectItem value="all">Tất cả trường</SelectItem>
                         {filterOptions.schools.slice(0, 20).map((school) => (
-                          <SelectItem key={school} value={school}>
+                          <SelectItem key={school} value={school || '-'}>
                             {school}
                           </SelectItem>
                         ))}
@@ -952,7 +952,7 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
                       <SelectContent>
                         <SelectItem value="all">Tất cả phường/quận</SelectItem>
                         {filterOptions.wards.slice(0, 20).map((ward) => (
-                          <SelectItem key={ward} value={ward}>
+                          <SelectItem key={ward} value={ward || '-'}>
                             {ward}
                           </SelectItem>
                         ))}
