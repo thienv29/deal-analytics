@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Progress } from "@/components/ui/progress"
+import * as EmailValidator from 'email-validator';
 import {
   RefreshCw,
   X,
@@ -45,7 +46,11 @@ interface DealsAnalyticsProps {
   onDataLoad?: (data: Deal[]) => void
 }
 
-const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884D8", "#82CA9D"]
+  const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884D8", "#82CA9D"]
+
+  const isValidEmail = (email: string): boolean => {
+    return EmailValidator.validate(email)
+  }
 
 export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
   const [deals, setDeals] = useState<Deal[]>([])
@@ -61,6 +66,8 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
   const [wardFilter, setWardFilter] = useState("")
   const [schoolWardPairFilter, setSchoolWardPairFilter] = useState("")
   const [duplicateEmailFilter, setDuplicateEmailFilter] = useState(false)
+  const [validEmailFilter, setValidEmailFilter] = useState(false)
+  const [isHasSchool, setHasSchool] = useState(false)
 
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(50)
@@ -139,9 +146,22 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
       })
     }
 
+    if (validEmailFilter) {
+      filtered = filtered.filter((deal) => {
+        const email = deal.email?.trim()
+        return email && !isValidEmail(email)
+      })
+    }
+
+    if (isHasSchool) {
+      filtered = filtered.filter((deal) => {
+        return !!deal.schoolName
+      })
+    }
+
     setFilteredDeals(filtered)
     setCurrentPage(1)
-  }, [deals, searchQuery, gradeFilter, schoolFilter, wardFilter, schoolWardPairFilter, duplicateEmailFilter])
+  }, [deals, searchQuery, gradeFilter, schoolFilter, wardFilter, schoolWardPairFilter, duplicateEmailFilter, validEmailFilter, isHasSchool])
 
   useEffect(() => {
     if (isInitialLoad) {
@@ -238,6 +258,8 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
     setSchoolWardPairFilter("")
     setDuplicateEmailFilter(false)
     setCurrentPage(1)
+    setValidEmailFilter(false)
+    setHasSchool(false)
   }
 
   const clearData = () => {
@@ -809,6 +831,37 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
                       </label>
                     </div>
                   </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Email hợp lệ</label>
+                    <div className="flex items-center gap-2 h-10 px-3 border rounded-md">
+                      <input
+                        type="checkbox"
+                        id="validEmail"
+                        checked={validEmailFilter}
+                        onChange={(e) => setValidEmailFilter(e.target.checked)}
+                        className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                      />
+                      <label htmlFor="validEmail" className="text-sm cursor-pointer">
+                        Chỉ hiện email hợp lệ
+                      </label>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">school</label>
+                    <div className="flex items-center gap-2 h-10 px-3 border rounded-md">
+                      <input
+                        type="checkbox"
+                        id="isHasSchool"
+                        checked={isHasSchool}
+                        onChange={(e) => setHasSchool(e.target.checked)}
+                        className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                      />
+                      <label htmlFor="validEmail" className="text-sm cursor-pointer">
+                        Chỉ hiện Trường hợp lệ
+                      </label>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-4 mt-6 pt-4 border-t">
@@ -822,7 +875,8 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
                     schoolFilter ||
                     wardFilter ||
                     schoolWardPairFilter ||
-                    duplicateEmailFilter) && (
+                    duplicateEmailFilter ||
+                    validEmailFilter) && (
                     <div className="flex flex-wrap items-center gap-2 text-sm">
                       <span className="text-muted-foreground font-medium">Đang lọc:</span>
                       {schoolWardPairFilter && schoolWardPairFilter !== "all" && (
@@ -848,6 +902,16 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
                       {duplicateEmailFilter && (
                         <span className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-xs font-medium">
                           Email trùng lặp
+                        </span>
+                      )}
+                      {validEmailFilter && (
+                        <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-medium">
+                          Email hợp lệ
+                        </span>
+                      )}
+                      {isHasSchool && (
+                        <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-medium">
+                          Có Dữ liệu trường
                         </span>
                       )}
                       {searchQuery && (
