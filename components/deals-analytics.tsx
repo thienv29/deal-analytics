@@ -58,6 +58,18 @@ interface DealsAnalyticsProps {
     return EmailValidator.validate(email)
   }
 
+  // Function to remove Vietnamese accents and convert to lowercase
+  const normalizeText = (text?: string): string => {
+    if (!text || !text.trim()) return ""
+    return text
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // Remove accents
+      .replace(/đ/g, 'd') // Replace đ with d
+      .replace(/Đ/g, 'D')
+      .trim()
+  }
+
 export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
   const [deals, setDeals] = useState<Deal[]>([])
   const [filteredDeals, setFilteredDeals] = useState<Deal[]>([])
@@ -89,6 +101,9 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
     "ID" | "studentName" | "parentOfStudentName" | "grade" | "className" | "email" | "phone" | "schoolName" | "ward"
   >("ID")
   const [tableSortDirection, setTableSortDirection] = useState<"asc" | "desc">("asc")
+
+  // Duplicate data tracking
+  const [duplicateGroups, setDuplicateGroups] = useState<any[]>([])
 
   const filterOptions = useMemo(() => {
     const grades = Array.from(new Set(deals.map((d) => d.grade).filter(Boolean))).sort()
@@ -664,6 +679,45 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
       </div>
     </th>
   )
+
+  // Group duplicates by name and email (normalized)
+  const duplicateData = useMemo(() => {
+    const duplicateGroups: Record<string, { name: string; email: string; count: number; deals: Deal[] }> = {}
+
+    filteredDeals.forEach((deal) => {
+      const studentName = normalizeText(deal.studentName)
+      const parentName = normalizeText(deal.parentOfStudentName)
+      const email = deal.email?.trim().toLowerCase() || ""
+
+      // Use whichever name is available (student name takes precedence)
+      const normalizedName = studentName || parentName
+
+      if (normalizedName) {
+        const key = `${normalizedName}:::${email}`
+
+        if (!duplicateGroups[key]) {
+          duplicateGroups[key] = {
+            name: normalizedName,
+            email,
+            count: 0,
+            deals: []
+          }
+        }
+
+        duplicateGroups[key].count += 1
+        duplicateGroups[key].deals.push(deal)
+      }
+    })
+
+    // Only include groups with duplicates (count > 1)
+    return Object.values(duplicateGroups)
+      .filter((group) => group.count > 1)
+      .sort((a, b) => b.count - a.count) // Sort by count descending
+  }, [filteredDeals, normalizeText])
+
+  const deleteDuplicateDeal = (dealId: string) => {
+    setDeals(prev => prev.filter(deal => deal.ID !== dealId))
+  }
 
   return (
     <div className="space-y-6">
@@ -1383,6 +1437,89 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
                 )}
               </CardContent>
             </Card>
+
+            {/* Duplicate Data Table */}
+            {duplicateData.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Dữ liệu trùng lặp ({duplicateData.reduce((acc, group) => acc + group.deals.length, 0)} bản ghi trùng)</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {duplicateData.map((group, groupIndex) => (
+                      <div key={`${group.name}:::${group.email}`} className="border rounded-lg p-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-sm">Tên trùng:</span>
+                              <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-medium">
+                                {group.name}
+                              </span>
+                            </div>
+                            {group.email && (
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium text-sm">Email trùng:</span>
+                                <span className="bg-red-100 text-red-800 px-2 py-1 rounded text-xs font-medium">
+                                  {group.email}
+                                </span>
+                              </div>
+                            )}
+                            <span className="text-sm text-muted-foreground">
+                              ({group.count} bản ghi)
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="overflow-x-auto">
+                          <table className="w-full border-collapse">
+                            <thead>
+                              <tr className="border-b bg-muted/30">
+                                <th className="text-left p-2 font-medium text-sm">ID</th>
+                                <th className="text-left p-2 font-medium text-sm">Học sinh</th>
+                                <th className="text-left p-2 font-medium text-sm">Tên phụ huynh</th>
+                                <th className="text-left p-2 font-medium text-sm">Khối</th>
+                                <th className="text-left p-2 font-medium text-sm">Lớp</th>
+                                <th className="text-left p-2 font-medium text-sm">Phone</th>
+                                <th className="text-left p-2 font-medium text-sm">Trường</th>
+                                <th className="text-left p-2 font-medium text-sm">Phường/Quận</th>
+                                <th className="text-left p-2 font-medium text-sm">Ngày tạo</th>
+                                <th className="text-center p-2 font-medium text-sm">Thao tác</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {group.deals.map((deal, index) => (
+                                <tr key={deal.ID} className="border-b hover:bg-muted/20">
+                                  <td className="p-2 text-sm">{deal.ID}</td>
+                                  <td className="p-2 text-sm">{deal.studentName || "-"}</td>
+                                  <td className="p-2 text-sm">{deal.parentOfStudentName || "-"}</td>
+                                  <td className="p-2 text-sm">{deal.grade || "-"}</td>
+                                  <td className="p-2 text-sm">{deal.className || "-"}</td>
+                                  <td className="p-2 text-sm">{deal.phone || "-"}</td>
+                                  <td className="p-2 text-sm">{deal.schoolName || "-"}</td>
+                                  <td className="p-2 text-sm">{deal.ward || "-"}</td>
+                                  <td className="p-2 text-sm">{deal.DATE_CREATE ? new Date(deal.DATE_CREATE).toLocaleDateString('vi-VN') : "-"}</td>
+                                  <td className="p-2 text-center">
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => deleteDuplicateDeal(deal.ID)}
+                                      className="h-8 px-2 text-xs hover:bg-red-50 hover:border-red-200 hover:text-red-700"
+                                    >
+                                      <X className="h-3 w-3 mr-1" />
+                                      Xóa
+                                    </Button>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
         </Tabs>
       )}
