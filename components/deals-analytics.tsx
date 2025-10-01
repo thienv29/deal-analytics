@@ -848,7 +848,7 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">school</label>
+                    <label className="text-sm font-medium">Trường hợp lệ</label>
                     <div className="flex items-center gap-2 h-10 px-3 border rounded-md">
                       <input
                         type="checkbox"
@@ -857,7 +857,7 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
                         onChange={(e) => setHasSchool(e.target.checked)}
                         className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
                       />
-                      <label htmlFor="validEmail" className="text-sm cursor-pointer">
+                      <label htmlFor="isHasSchool" className="text-sm cursor-pointer">
                         Chỉ hiện Trường hợp lệ
                       </label>
                     </div>
