@@ -23,6 +23,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react"
+import * as XLSX from 'xlsx'
 import { Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Line, ComposedChart } from "recharts"
 
 interface Deal {
@@ -528,6 +529,52 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
     document.body.removeChild(link)
   }
 
+  const exportToExcel = () => {
+    if (filteredDeals.length === 0) return
+
+    // Prepare data for Excel export
+    const excelData = filteredDeals.map((deal) => ({
+      "ID": deal.ID || "",
+      "Tên học sinh": deal.studentName || deal.parentOfStudentName || "",
+      "Tên phụ huynh": deal.parentOfStudentName || "",
+      "Khối": deal.grade || "",
+      "Lớp": deal.className || "",
+      "Email": deal.email || "",
+      "Số điện thoại": deal.phone || "",
+      "Trường học": deal.schoolName || "",
+      "Phường/Quận": deal.ward || "",
+      "Địa chỉ": deal.address || "",
+      "Ngày tạo": deal.DATE_CREATE || "",
+    }))
+
+    // Create worksheet
+    const ws = XLSX.utils.json_to_sheet(excelData)
+
+    // Set column widths
+    const colWidths = [
+      { wch: 10 }, // ID
+      { wch: 20 }, // Tên học sinh
+      { wch: 20 }, // Tên phụ huynh
+      { wch: 10 }, // Khối
+      { wch: 15 }, // Lớp
+      { wch: 30 }, // Email
+      { wch: 15 }, // Số điện thoại
+      { wch: 25 }, // Trường học
+      { wch: 20 }, // Phường/Quận
+      { wch: 30 }, // Địa chỉ
+      { wch: 20 }, // Ngày tạo
+    ]
+    ws['!cols'] = colWidths
+
+    // Create workbook
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, "Deals Data")
+
+    // Generate and download file
+    const fileName = `deals-export-${new Date().toISOString().split("T")[0]}.xlsx`
+    XLSX.writeFile(wb, fileName)
+  }
+
   const handleSort = (field: typeof sortField) => {
     if (sortField === field) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc")
@@ -635,6 +682,10 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
               <Button variant="outline" onClick={exportToJSON} className="gap-2 bg-transparent">
                 <Download className="h-4 w-4" />
                 Export JSON
+              </Button>
+              <Button variant="outline" onClick={exportToExcel} className="gap-2 bg-transparent">
+                <Download className="h-4 w-4" />
+                Export Excel
               </Button>
             </>
           )}
@@ -1124,6 +1175,10 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
                         <Button variant="outline" size="sm" onClick={exportToJSON} className="gap-1 bg-transparent">
                           <Download className="h-3 w-3" />
                           JSON
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={exportToExcel} className="gap-1 bg-transparent">
+                          <Download className="h-3 w-3" />
+                          Excel
                         </Button>
                       </>
                     )}
