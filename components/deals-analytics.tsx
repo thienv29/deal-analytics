@@ -784,7 +784,7 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
       {deals.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card className="border-l-4 border-l-blue-500">
-            <CardContent className="pt-6">
+            <CardContent>
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-2xl font-bold">{metrics.total}</div>
@@ -795,7 +795,7 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
             </CardContent>
           </Card>
           <Card className="border-l-4 border-l-green-500">
-            <CardContent className="pt-6">
+            <CardContent >
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-2xl font-bold text-green-600">{metrics.withContact}</div>
@@ -806,7 +806,7 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
             </CardContent>
           </Card>
           <Card className="border-l-4 border-l-orange-500">
-            <CardContent className="pt-6">
+            <CardContent >
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-2xl font-bold text-orange-600">{metrics.noContact}</div>
@@ -817,7 +817,7 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
             </CardContent>
           </Card>
           <Card className="border-l-4 border-l-purple-500">
-            <CardContent className="pt-6">
+            <CardContent>
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-2xl font-bold text-purple-600">
