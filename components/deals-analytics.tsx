@@ -66,8 +66,8 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
   const [wardFilter, setWardFilter] = useState("")
   const [schoolWardPairFilter, setSchoolWardPairFilter] = useState("")
   const [duplicateEmailFilter, setDuplicateEmailFilter] = useState(false)
-  const [validEmailFilter, setValidEmailFilter] = useState(false)
-  const [isHasSchool, setHasSchool] = useState(false)
+  const [emailValidityFilter, setEmailValidityFilter] = useState<'all' | 'valid' | 'invalid'>('all')
+  const [schoolValidityFilter, setSchoolValidityFilter] = useState<'all' | 'valid' | 'invalid_empty'>('all')
 
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(50)
@@ -146,22 +146,31 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
       })
     }
 
-    if (validEmailFilter) {
+    if (emailValidityFilter === 'valid') {
+      filtered = filtered.filter((deal) => {
+        const email = deal.email?.trim()
+        return email && isValidEmail(email)
+      })
+    } else if (emailValidityFilter === 'invalid') {
       filtered = filtered.filter((deal) => {
         const email = deal.email?.trim()
         return email && !isValidEmail(email)
       })
     }
 
-    if (isHasSchool) {
+    if (schoolValidityFilter === 'valid') {
       filtered = filtered.filter((deal) => {
         return !!deal.schoolName
+      })
+    } else if (schoolValidityFilter === 'invalid_empty') {
+      filtered = filtered.filter((deal) => {
+        return !deal.schoolName
       })
     }
 
     setFilteredDeals(filtered)
     setCurrentPage(1)
-  }, [deals, searchQuery, gradeFilter, schoolFilter, wardFilter, schoolWardPairFilter, duplicateEmailFilter, validEmailFilter, isHasSchool])
+  }, [deals, searchQuery, gradeFilter, schoolFilter, wardFilter, schoolWardPairFilter, duplicateEmailFilter, emailValidityFilter, schoolValidityFilter])
 
   useEffect(() => {
     if (isInitialLoad) {
@@ -257,9 +266,9 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
     setWardFilter("")
     setSchoolWardPairFilter("")
     setDuplicateEmailFilter(false)
+    setEmailValidityFilter('all')
+    setSchoolValidityFilter('all')
     setCurrentPage(1)
-    setValidEmailFilter(false)
-    setHasSchool(false)
   }
 
   const clearData = () => {
@@ -834,33 +843,29 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
 
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Email hợp lệ</label>
-                    <div className="flex items-center gap-2 h-10 px-3 border rounded-md">
-                      <input
-                        type="checkbox"
-                        id="validEmail"
-                        checked={validEmailFilter}
-                        onChange={(e) => setValidEmailFilter(e.target.checked)}
-                        className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
-                      />
-                      <label htmlFor="validEmail" className="text-sm cursor-pointer">
-                        Chỉ hiện email hợp lệ
-                      </label>
-                    </div>
+                    <Select value={emailValidityFilter} onValueChange={(value) => setEmailValidityFilter(value as 'all' | 'valid' | 'invalid')}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Hiện tất cả</SelectItem>
+                        <SelectItem value="valid">Chỉ hiện email hợp lệ</SelectItem>
+                        <SelectItem value="invalid">Chỉ hiện email không hợp lệ</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Trường hợp lệ</label>
-                    <div className="flex items-center gap-2 h-10 px-3 border rounded-md">
-                      <input
-                        type="checkbox"
-                        id="isHasSchool"
-                        checked={isHasSchool}
-                        onChange={(e) => setHasSchool(e.target.checked)}
-                        className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
-                      />
-                      <label htmlFor="isHasSchool" className="text-sm cursor-pointer">
-                        Chỉ hiện Trường hợp lệ
-                      </label>
-                    </div>
+                    <Select value={schoolValidityFilter} onValueChange={(value) => setSchoolValidityFilter(value as 'all' | 'valid' | 'invalid_empty')}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Hiện tất cả</SelectItem>
+                        <SelectItem value="valid">Chỉ hiện trường hợp lệ</SelectItem>
+                        <SelectItem value="invalid_empty">Chỉ hiện trường không hợp lệ hoặc trống</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
 
@@ -876,7 +881,8 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
                     wardFilter ||
                     schoolWardPairFilter ||
                     duplicateEmailFilter ||
-                    validEmailFilter) && (
+                    emailValidityFilter !== 'all' ||
+                    schoolValidityFilter !== 'all') && (
                     <div className="flex flex-wrap items-center gap-2 text-sm">
                       <span className="text-muted-foreground font-medium">Đang lọc:</span>
                       {schoolWardPairFilter && schoolWardPairFilter !== "all" && (
@@ -904,14 +910,24 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
                           Email trùng lặp
                         </span>
                       )}
-                      {validEmailFilter && (
+                      {emailValidityFilter === 'valid' && (
                         <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-medium">
                           Email hợp lệ
                         </span>
                       )}
-                      {isHasSchool && (
-                        <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-medium">
-                          Có Dữ liệu trường
+                      {emailValidityFilter === 'invalid' && (
+                        <span className="bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-xs font-medium">
+                          Email không hợp lệ
+                        </span>
+                      )}
+                      {schoolValidityFilter === 'valid' && (
+                        <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-medium">
+                          Trường hợp lệ
+                        </span>
+                      )}
+                      {schoolValidityFilter === 'invalid_empty' && (
+                        <span className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-xs font-medium">
+                          Trường không hợp lệ hoặc trống
                         </span>
                       )}
                       {searchQuery && (
