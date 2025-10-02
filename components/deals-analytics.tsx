@@ -47,6 +47,7 @@ export interface Deal {
   address?: string
   DATE_CREATE?: string
   schoolNameTmp?: string
+  isDisabled?: string
 }
 
 interface DealsAnalyticsProps {
@@ -598,7 +599,16 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
   }, [filteredDeals, normalizeText])
 
   const deleteDuplicateDeal = (dealId: string) => {
+    // Remove from local state immediately
     setDeals(prev => prev.filter(deal => deal.ID !== dealId))
+    // Call API in background (fire and forget)
+    fetch("/api/deals/update", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: dealId }),
+    }).catch((error) => {
+      console.error("Error disabling deal:", error)
+    })
   }
 
   const toggleCorrectDataSelection = (groupKey: string, dealId: string) => {
@@ -2051,10 +2061,11 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
                                     <th className="text-left p-2 font-medium text-sm">Khối</th>
                                     <th className="text-left p-2 font-medium text-sm">Lớp</th>
                                     <th className="text-left p-2 font-medium text-sm">Phone</th>
+                                    <th className="text-left p-2 font-medium text-sm">Email</th>
                                     <th className="text-left p-2 font-medium text-sm">Trường</th>
                                     <th className="text-left p-2 font-medium text-sm">Phường/Quận</th>
                                     <th className="text-left p-2 font-medium text-sm">Ngày tạo</th>
-                                    <th className="text-center p-2 font-medium text-sm">Thao tác</th>
+                                    <th className="text-center p-2 font-medium text-sm">Vô hiệu hóa</th>
                                   </tr>
                                 </thead>
                                 <tbody>
@@ -2074,6 +2085,7 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
                                       <td className="p-2 text-sm">{deal.grade || "-"}</td>
                                       <td className="p-2 text-sm">{deal.className || "-"}</td>
                                       <td className="p-2 text-sm">{deal.phone || "-"}</td>
+                                      <td className="p-2 text-sm">{deal.email || "-"}</td>
                                       <td className="p-2 text-sm">{deal.schoolName || "-"}</td>
                                       <td className="p-2 text-sm">{deal.ward || "-"}</td>
                                       <td className="p-2 text-sm">{deal.DATE_CREATE ? new Date(deal.DATE_CREATE).toLocaleDateString('vi-VN') : "-"}</td>
@@ -2113,7 +2125,7 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
                               <th className="text-left p-3 font-medium">Trường</th>
                               <th className="text-left p-3 font-medium">Phường/Quận</th>
                               <th className="text-left p-3 font-medium">Ngày tạo</th>
-                              <th className="text-center p-3 font-medium">Thao tác</th>
+                              <th className="text-center p-3 font-medium">Vô hiệu hóa</th>
                             </tr>
                           </thead>
                           <tbody>

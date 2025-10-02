@@ -10,6 +10,7 @@ const fieldMap = {
   UF_CRM_DEAL_1717076519247: "phone",
   UF_CRM_6178C6D31587F: "address",
   UF_CRM_1758164804: "schoolNameTmp",
+  UF_CRM_1759402265: "isDisabled",
 }
 
 function mapItem(item: any) {
@@ -29,7 +30,7 @@ export async function GET() {
     const baseUrl = "https://anhnguiclc.com/rest/1/dcqn591zbut35f5u/crm.deal.list.json"
 
     // First, get total count to determine how many parallel requests we need
-    const countUrl = `${baseUrl}?filter[CATEGORY_ID]=81&select[]=ID&start=0`
+    const countUrl = `${baseUrl}?filter[CATEGORY_ID]=81&filter[UF_CRM_1759402265]=N&select[]=ID&start=0`
     const countResponse = await fetch(countUrl, {
       method: "GET",
       headers: {
@@ -65,7 +66,7 @@ export async function GET() {
       // Create parallel requests for this chunk
       for (let i = chunk; i < chunkEnd; i++) {
         const start = i * recordsPerRequest
-        const url = `${baseUrl}?filter[CATEGORY_ID]=81&select[]=ID&select[]=TITLE&select[]=UF_CRM_6178C6D2EDA26&select[]=UF_CRM_1742537683&select[]=UF_CRM_1755499870&select[]=UF_CRM_1718938262&select[]=UF_CRM_1724832179&select[]=UF_CRM_6178C6D3035AF&select[]=UF_CRM_DEAL_1717076457153&select[]=UF_CRM_6178C6D30C6A9&select[]=UF_CRM_DEAL_1717076519247&select[]=UF_CRM_6178C6D31587F&select[]=DATE_CREATE&select[]=UF_CRM_1758164804&start=${start}`
+        const url = `${baseUrl}?filter[CATEGORY_ID]=81&filter[UF_CRM_1759402265]=N&select[]=ID&select[]=TITLE&select[]=UF_CRM_6178C6D2EDA26&select[]=UF_CRM_1742537683&select[]=UF_CRM_1755499870&select[]=UF_CRM_1718938262&select[]=UF_CRM_1724832179&select[]=UF_CRM_6178C6D3035AF&select[]=UF_CRM_DEAL_1717076457153&select[]=UF_CRM_6178C6D30C6A9&select[]=UF_CRM_DEAL_1717076519247&select[]=UF_CRM_6178C6D31587F&select[]=DATE_CREATE&select[]=UF_CRM_1758164804&select[]=UF_CRM_1759402265&start=${start}`
 
         const promise = fetch(url, {
           method: "GET",
