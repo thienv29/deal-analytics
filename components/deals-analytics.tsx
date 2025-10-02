@@ -11,7 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils"
 import { format } from "date-fns"
 import * as EmailValidator from 'email-validator';
-import { exportToCSV, exportToJSON, exportToExcel } from "@/lib/export-utils"
+import { exportToCSV, exportToJSON, exportToExcel, exportDuplicateDataToExcel } from "@/lib/export-utils"
 import {
   RefreshCw,
   X,
@@ -102,8 +102,11 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
   >("ID")
   const [tableSortDirection, setTableSortDirection] = useState<"asc" | "desc">("asc")
 
-  // Duplicate data tracking
-  // const [duplicateGroups, setDuplicateGroups] = useState<any[]>([])
+  // State to track which duplicate deals are marked as correct
+  const [correctDataSelections, setCorrectDataSelections] = useState<Record<string, string[]>>({})
+
+  // State for export options
+  const [duplicateExportGrouped, setDuplicateExportGrouped] = useState(true)
 
   const filterOptions = useMemo(() => {
     const grades = Array.from(new Set(deals.map((d) => d.grade).filter(Boolean))).sort()
@@ -611,6 +614,29 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
 
   const deleteDuplicateDeal = (dealId: string) => {
     setDeals(prev => prev.filter(deal => deal.ID !== dealId))
+  }
+
+  const toggleCorrectDataSelection = (groupKey: string, dealId: string) => {
+    setCorrectDataSelections(prev => {
+      const currentSelections = prev[groupKey] || []
+      const isSelected = currentSelections.includes(dealId)
+
+      if (isSelected) {
+        return {
+          ...prev,
+          [groupKey]: currentSelections.filter(id => id !== dealId)
+        }
+      } else {
+        return {
+          ...prev,
+          [groupKey]: [...currentSelections, dealId]
+        }
+      }
+    })
+  }
+
+  const handleExportDuplicateData = () => {
+    exportDuplicateDataToExcel(duplicateData, correctDataSelections, duplicateExportGrouped)
   }
 
   return (
@@ -1336,80 +1362,119 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
             {duplicateData.length > 0 && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Dữ liệu trùng lặp ({duplicateData.reduce((acc, group) => acc + group.deals.length, 0)} bản ghi trùng)</CardTitle>
+                  <div className="flex justify-between items-center">
+                    <CardTitle>Dữ liệu trùng lặp ({duplicateData.reduce((acc, group) => acc + group.deals.length, 0)} bản ghi trùng)</CardTitle>
+                    <div className="flex items-center gap-2">
+                      <Select
+                        value={duplicateExportGrouped.toString()}
+                        onValueChange={(value) => setDuplicateExportGrouped(value === "true")}
+                      >
+                        <SelectTrigger className="w-40">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="true">Xuất theo nhóm</SelectItem>
+                          <SelectItem value="false">Xuất danh sách phẳng</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleExportDuplicateData}
+                        className="gap-2 bg-transparent"
+                      >
+                        <Download className="h-3 w-3" />
+                        Export Excel
+                      </Button>
+                    </div>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {duplicateData.map((group, groupIndex) => (
-                      <div key={`${group.name}:::${group.email}`} className="border rounded-lg p-4">
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium text-sm">Tên trùng:</span>
-                              <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-medium">
-                                {group.name}
-                              </span>
-                            </div>
-                            {group.email && (
+                    {duplicateData.map((group, groupIndex) => {
+                      const groupKey = `${group.name}:::${group.email || ""}`
+                      const selectedIds = correctDataSelections[groupKey] || []
+
+                      return (
+                        <div key={groupKey} className="border rounded-lg p-4">
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                               <div className="flex items-center gap-2">
-                                <span className="font-medium text-sm">Email trùng:</span>
-                                <span className="bg-red-100 text-red-800 px-2 py-1 rounded text-xs font-medium">
-                                  {group.email}
+                                <span className="font-medium text-sm">Tên trùng:</span>
+                                <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-medium">
+                                  {group.name}
                                 </span>
                               </div>
-                            )}
-                            <span className="text-sm text-muted-foreground">
-                              ({group.count} bản ghi)
-                            </span>
+                              {group.email && (
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium text-sm">Email trùng:</span>
+                                  <span className="bg-red-100 text-red-800 px-2 py-1 rounded text-xs font-medium">
+                                    {group.email}
+                                  </span>
+                                </div>
+                              )}
+                              <span className="text-sm text-muted-foreground">
+                                ({group.count} bản ghi) - Đã chọn: {selectedIds.length} bản ghi đúng
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="overflow-x-auto">
+                            <table className="w-full border-collapse">
+                              <thead>
+                                <tr className="border-b bg-muted/30">
+                                  <th className="text-center p-2 font-medium text-sm">Đánh dấu dữ liệu đúng (x) (x)</th>
+                                  <th className="text-left p-2 font-medium text-sm">ID</th>
+                                  <th className="text-left p-2 font-medium text-sm">Học sinh</th>
+                                  <th className="text-left p-2 font-medium text-sm">Tên phụ huynh</th>
+                                  <th className="text-left p-2 font-medium text-sm">Khối</th>
+                                  <th className="text-left p-2 font-medium text-sm">Lớp</th>
+                                  <th className="text-left p-2 font-medium text-sm">Phone</th>
+                                  <th className="text-left p-2 font-medium text-sm">Trường</th>
+                                  <th className="text-left p-2 font-medium text-sm">Phường/Quận</th>
+                                  <th className="text-left p-2 font-medium text-sm">Ngày tạo</th>
+                                  <th className="text-center p-2 font-medium text-sm">Thao tác</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {group.deals.map((deal, index) => (
+                                  <tr key={deal.ID} className={`border-b hover:bg-muted/20 ${selectedIds.includes(deal.ID) ? 'bg-blue-50' : ''}`}>
+                                    <td className="p-2 text-center">
+                                      <input
+                                        type="checkbox"
+                                        checked={selectedIds.includes(deal.ID)}
+                                        onChange={() => toggleCorrectDataSelection(groupKey, deal.ID)}
+                                        className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                                      />
+                                    </td>
+                                    <td className="p-2 text-sm">{deal.ID}</td>
+                                    <td className="p-2 text-sm">{deal.studentName || "-"}</td>
+                                    <td className="p-2 text-sm">{deal.parentOfStudentName || "-"}</td>
+                                    <td className="p-2 text-sm">{deal.grade || "-"}</td>
+                                    <td className="p-2 text-sm">{deal.className || "-"}</td>
+                                    <td className="p-2 text-sm">{deal.phone || "-"}</td>
+                                    <td className="p-2 text-sm">{deal.schoolName || "-"}</td>
+                                    <td className="p-2 text-sm">{deal.ward || "-"}</td>
+                                    <td className="p-2 text-sm">{deal.DATE_CREATE ? new Date(deal.DATE_CREATE).toLocaleDateString('vi-VN') : "-"}</td>
+                                    <td className="p-2 text-center">
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => deleteDuplicateDeal(deal.ID)}
+                                        className="h-8 px-2 text-xs hover:bg-red-50 hover:border-red-200 hover:text-red-700"
+                                      >
+                                        <X className="h-3 w-3 mr-1" />
+                                        Xóa
+                                      </Button>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
                           </div>
                         </div>
-
-                        <div className="overflow-x-auto">
-                          <table className="w-full border-collapse">
-                            <thead>
-                              <tr className="border-b bg-muted/30">
-                                <th className="text-left p-2 font-medium text-sm">ID</th>
-                                <th className="text-left p-2 font-medium text-sm">Học sinh</th>
-                                <th className="text-left p-2 font-medium text-sm">Tên phụ huynh</th>
-                                <th className="text-left p-2 font-medium text-sm">Khối</th>
-                                <th className="text-left p-2 font-medium text-sm">Lớp</th>
-                                <th className="text-left p-2 font-medium text-sm">Phone</th>
-                                <th className="text-left p-2 font-medium text-sm">Trường</th>
-                                <th className="text-left p-2 font-medium text-sm">Phường/Quận</th>
-                                <th className="text-left p-2 font-medium text-sm">Ngày tạo</th>
-                                <th className="text-center p-2 font-medium text-sm">Thao tác</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {group.deals.map((deal, index) => (
-                                <tr key={deal.ID} className="border-b hover:bg-muted/20">
-                                  <td className="p-2 text-sm">{deal.ID}</td>
-                                  <td className="p-2 text-sm">{deal.studentName || "-"}</td>
-                                  <td className="p-2 text-sm">{deal.parentOfStudentName || "-"}</td>
-                                  <td className="p-2 text-sm">{deal.grade || "-"}</td>
-                                  <td className="p-2 text-sm">{deal.className || "-"}</td>
-                                  <td className="p-2 text-sm">{deal.phone || "-"}</td>
-                                  <td className="p-2 text-sm">{deal.schoolName || "-"}</td>
-                                  <td className="p-2 text-sm">{deal.ward || "-"}</td>
-                                  <td className="p-2 text-sm">{deal.DATE_CREATE ? new Date(deal.DATE_CREATE).toLocaleDateString('vi-VN') : "-"}</td>
-                                  <td className="p-2 text-center">
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => deleteDuplicateDeal(deal.ID)}
-                                      className="h-8 px-2 text-xs hover:bg-red-50 hover:border-red-200 hover:text-red-700"
-                                    >
-                                      <X className="h-3 w-3 mr-1" />
-                                      Xóa
-                                    </Button>
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 </CardContent>
               </Card>
