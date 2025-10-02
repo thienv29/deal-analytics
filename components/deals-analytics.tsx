@@ -52,8 +52,6 @@ interface DealsAnalyticsProps {
   onDataLoad?: (data: Deal[]) => void
 }
 
-  const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884D8", "#82CA9D"]
-
   const isValidEmail = (email: string): boolean => {
     return EmailValidator.validate(email)
   }
