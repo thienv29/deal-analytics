@@ -474,3 +474,434 @@ export const exportSummaryAndDuplicateToExcel = (
   const fileName = `summary-and-duplicate-export-${new Date().toISOString().split("T")[0]}.xlsx`
   XLSX.writeFile(wb, fileName)
 }
+
+export const exportMultiFormat = (
+  options: {
+    format?: 'json' | 'csv' | 'excel'
+    includeSummary?: boolean
+    includeDeals?: boolean
+    includeDuplicates?: boolean
+    summaryData?: any[]
+    dealsData?: Deal[]
+    duplicateData?: { name: string; email: string; count: number; deals: Deal[] }[]
+    correctDataSelections?: Record<string, string[]>
+    duplicateExportGrouped?: boolean
+  }
+) => {
+  const {
+    format = 'excel',
+    includeSummary = false,
+    includeDeals = false,
+    includeDuplicates = false,
+    summaryData = [],
+    dealsData = [],
+    duplicateData = [],
+    correctDataSelections = {},
+    duplicateExportGrouped = true,
+  } = options
+
+  // Check if at least one type is selected and has data
+  const hasSummaryData = includeSummary && summaryData.length > 0
+  const hasDealsData = includeDeals && dealsData.length > 0
+  const hasDuplicateData = includeDuplicates && duplicateData.length > 0
+
+  if (!hasSummaryData && !hasDealsData && !hasDuplicateData) {
+    return
+  }
+
+  if (format === 'excel') {
+    // Use the existing Excel multi-sheet export
+    return exportMultiSheetExcel({
+      includeSummary,
+      includeDeals,
+      includeDuplicates,
+      summaryData,
+      dealsData,
+      duplicateData,
+      correctDataSelections,
+      duplicateExportGrouped,
+    })
+  } else if (format === 'json') {
+    // Export JSON with multiple data types
+    const jsonData: any = {}
+
+    if (hasSummaryData) {
+      jsonData.summary = summaryData
+    }
+
+    if (hasDealsData) {
+      jsonData.deals = dealsData
+    }
+
+    if (hasDuplicateData) {
+      if (duplicateExportGrouped) {
+        jsonData.duplicatesGrouped = duplicateData.map(group => ({
+          name: group.name,
+          email: group.email,
+          count: group.count,
+          isCorrectSelected: correctDataSelections[group.name + ":::" + (group.email || "")] || [],
+          deals: group.deals
+        }))
+      } else {
+        // Flat export
+        const allDeals: Deal[] = []
+        const dealInfo: Record<string, { groupName: string; groupEmail: string; isCorrect: boolean }> = {}
+
+        duplicateData.forEach((group) => {
+          const correctIds = correctDataSelections[group.name + ":::" + (group.email || "")] || []
+
+          group.deals.forEach((deal) => {
+            allDeals.push(deal)
+            dealInfo[deal.ID] = {
+              groupName: group.name,
+              groupEmail: group.email || "",
+              isCorrect: correctIds.includes(deal.ID)
+            }
+          })
+        })
+
+        jsonData.duplicatesFlat = allDeals.map(deal => ({
+          ...deal,
+          duplicateInfo: dealInfo[deal.ID]
+        }))
+      }
+    }
+
+    // Download JSON
+    const jsonContent = JSON.stringify(jsonData, null, 2)
+    const blob = new Blob([jsonContent], { type: "application/json" })
+
+    // Generate filename
+    const selectedTypes = []
+    if (hasSummaryData) selectedTypes.push("summary")
+    if (hasDealsData) selectedTypes.push("deals")
+    if (hasDuplicateData) selectedTypes.push(duplicateExportGrouped ? "duplicates-grouped" : "duplicates-flat")
+
+    const fileName = `export-${selectedTypes.join("-")}-${new Date().toISOString().split("T")[0]}.json`
+    const link = document.createElement("a")
+    const url = URL.createObjectURL(blob)
+    link.setAttribute("href", url)
+    link.setAttribute("download", fileName)
+    link.style.visibility = "hidden"
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+
+  } else if (format === 'csv') {
+    // Export multiple CSV files
+    if (hasDealsData) {
+      setTimeout(() => exportToCSV(dealsData), 0)
+    }
+    if (hasSummaryData) {
+      const summaryCsvData = summaryData.map((item: any, index: number) => ({
+        "STT": index + 1,
+        "Truong hoc": item.school || "",
+        "Phuong/Quan": item.ward || "",
+        "Tong deals": item.total || 0,
+        "Duy nhat": item.unique || 0,
+        "Trung lap": item.duplicates || 0,
+        "Ty le trung": item.duplicateRate || "",
+      }))
+      setTimeout(() => {
+        exportArrayToCSV(summaryCsvData, `export-summary-${new Date().toISOString().split("T")[0]}.csv`)
+      }, 100)
+    }
+    if (hasDuplicateData) {
+      setTimeout(() => {
+        if (duplicateExportGrouped) {
+          exportDuplicateDataToExcel(duplicateData, correctDataSelections, true)
+          // For CSV, we'll still export as the Excel format but as a single CSV
+          exportDuplicateDataToExcel(duplicateData, correctDataSelections, duplicateExportGrouped)
+        } else {
+          exportDuplicateDataToExcel(duplicateData, correctDataSelections, false)
+        }
+      }, 200)
+    }
+  }
+}
+
+// Helper function for CSV export
+const exportArrayToCSV = (data: any[], filename: string) => {
+  if (data.length === 0) return
+
+  const headers = Object.keys(data[0]).join(",")
+  const csvContent = [
+    headers,
+    ...data.map(row =>
+      Object.values(row).map(val =>
+        `"${String(val || "").replace(/"/g, '""')}"`
+      ).join(",")
+    ),
+  ].join("\n")
+
+  const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" })
+  const link = document.createElement("a")
+  const url = URL.createObjectURL(blob)
+  link.setAttribute("href", url)
+  link.setAttribute("download", filename)
+  link.style.visibility = "hidden"
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+}
+
+export const exportMultiSheetExcel = (
+  options: {
+    includeSummary?: boolean
+    includeDeals?: boolean
+    includeDuplicates?: boolean
+    summaryData?: any[]
+    dealsData?: Deal[]
+    duplicateData?: { name: string; email: string; count: number; deals: Deal[] }[]
+    correctDataSelections?: Record<string, string[]>
+    duplicateExportGrouped?: boolean
+  }
+) => {
+  const {
+    includeSummary = false,
+    includeDeals = false,
+    includeDuplicates = false,
+    summaryData = [],
+    dealsData = [],
+    duplicateData = [],
+    correctDataSelections = {},
+    duplicateExportGrouped = true,
+  } = options
+
+  // Check if at least one type is selected and has data
+  const hasSummaryData = includeSummary && summaryData.length > 0
+  const hasDealsData = includeDeals && dealsData.length > 0
+  const hasDuplicateData = includeDuplicates && duplicateData.length > 0
+
+  if (!hasSummaryData && !hasDealsData && !hasDuplicateData) {
+    return
+  }
+
+  const wb = XLSX.utils.book_new()
+
+  // Sheet 1: Summary Data (if selected and has data)
+  if (hasSummaryData) {
+    const summaryExcelData = summaryData.map((item: any, index: number) => ({
+      "STT": index + 1,
+      "Trường học": item.school || "",
+      "Phường/Quận": item.ward || "",
+      "Tổng deals": item.total || 0,
+      "Duy nhất": item.unique || 0,
+      "Trùng lặp": item.duplicates || 0,
+      "Tỷ lệ trùng": item.duplicateRate || "",
+    }))
+
+    const summaryWs = XLSX.utils.json_to_sheet(summaryExcelData)
+    const summaryColWidths = [
+      { wch: 6 }, // STT
+      { wch: 25 }, // Trường học
+      { wch: 20 }, // Phường/Quận
+      { wch: 12 }, // Tổng deals
+      { wch: 12 }, // Duy nhất
+      { wch: 12 }, // Trùng lặp
+      { wch: 15 }, // Tỷ lệ trùng
+    ]
+    summaryWs['!cols'] = summaryColWidths
+    XLSX.utils.book_append_sheet(wb, summaryWs, "Bảng tổng hợp")
+  }
+
+  // Sheet 2: Deals List (if selected and has data)
+  if (hasDealsData) {
+    const dealsExcelData = dealsData.map((deal) => ({
+      "ID": deal.ID || "",
+      "Tên học sinh": deal.studentName || "",
+      "Tên phụ huynh": deal.parentOfStudentName || "",
+      "Khối": deal.grade || "",
+      "Lớp": deal.className || "",
+      "Email": deal.email || "",
+      "Số điện thoại": deal.phone || "",
+      "Trường học": deal.schoolName || "",
+      "Phường/Quận": deal.ward || "",
+      "Địa chỉ": deal.address || "",
+      "Ngày tạo": deal.DATE_CREATE || "",
+    }))
+
+    const dealsWs = XLSX.utils.json_to_sheet(dealsExcelData)
+    const dealsColWidths = [
+      { wch: 10 }, // ID
+      { wch: 20 }, // Tên học sinh
+      { wch: 20 }, // Tên phụ huynh
+      { wch: 10 }, // Khối
+      { wch: 15 }, // Lớp
+      { wch: 30 }, // Email
+      { wch: 15 }, // Số điện thoại
+      { wch: 25 }, // Trường học
+      { wch: 20 }, // Phường/Quận
+      { wch: 30 }, // Địa chỉ
+      { wch: 20 }, // Ngày tạo
+    ]
+    dealsWs['!cols'] = dealsColWidths
+    XLSX.utils.book_append_sheet(wb, dealsWs, "Danh sách deals")
+  }
+
+  // Sheet 3: Duplicate Data (if selected and has data)
+  if (hasDuplicateData) {
+    const duplicateExcelData: Record<string, any>[] = []
+
+    if (duplicateExportGrouped) {
+      duplicateData.forEach((group, groupIndex) => {
+        // Add group header
+        duplicateExcelData.push({
+          "Nhóm trùng lặp": `Nhóm ${groupIndex + 1}: ${group.name} - ${group.email || 'Không có email'}`,
+          "Nhóm": groupIndex + 1,
+          "Tên trùng": group.name,
+          "Email trùng": group.email || 'Không có email',
+          "Số lượng": group.count,
+          "ID": "",
+          "Tên học sinh": "",
+          "Tên phụ huynh": "",
+          "Khối": "",
+          "Lớp": "",
+          "Email": "",
+          "Số điện thoại": "",
+          "Trường học": "",
+          "Phường/Quận": "",
+          "Địa chỉ": "",
+          "Ngày tạo": "",
+          "Đánh dấu dữ liệu đúng (x)": "",
+        })
+
+        // Add deals in this group
+        const correctIds = correctDataSelections[group.name + ":::" + (group.email || "")] || []
+
+        group.deals.forEach((deal) => {
+          duplicateExcelData.push({
+            "Nhóm trùng lặp": "",
+            "Nhóm": "",
+            "Tên trùng": "",
+            "Email trùng": "",
+            "Số lượng": "",
+            "ID": deal.ID || "",
+            "Tên học sinh": deal.studentName || "",
+            "Tên phụ huynh": deal.parentOfStudentName || "",
+            "Khối": deal.grade || "",
+            "Lớp": deal.className || "",
+            "Email": deal.email || "",
+            "Số điện thoại": deal.phone || "",
+            "Trường học": deal.schoolName || "",
+            "Phường/Quận": deal.ward || "",
+            "Địa chỉ": deal.address || "",
+            "Ngày tạo": deal.DATE_CREATE || "",
+            "Đánh dấu dữ liệu đúng (x)": correctIds.includes(deal.ID) ? "✓" : "",
+          })
+        })
+
+        // Add empty row between groups
+        duplicateExcelData.push({
+          "Nhóm trùng lặp": "",
+          "Nhóm": "",
+          "Tên trùng": "",
+          "Email trùng": "",
+          "Số lượng": "",
+          "ID": "",
+          "Tên học sinh": "",
+          "Tên phụ huynh": "",
+          "Khối": "",
+          "Lớp": "",
+          "Email": "",
+          "Số điện thoại": "",
+          "Trường học": "",
+          "Phường/Quận": "",
+          "Địa chỉ": "",
+          "Ngày tạo": "",
+          "Đánh dấu dữ liệu đúng (x)": "",
+        })
+      })
+    } else {
+      // Flat export - all duplicates in one list
+      const allDeals: Deal[] = []
+      const dealInfo: Record<string, { groupName: string; groupEmail: string; isCorrect: boolean }> = {}
+
+      duplicateData.forEach((group) => {
+        const correctIds = correctDataSelections[group.name + ":::" + (group.email || "")] || []
+
+        group.deals.forEach((deal) => {
+          allDeals.push(deal)
+          dealInfo[deal.ID] = {
+            groupName: group.name,
+            groupEmail: group.email || "",
+            isCorrect: correctIds.includes(deal.ID)
+          }
+        })
+      })
+
+      allDeals.forEach((deal) => {
+        const info = dealInfo[deal.ID]
+        duplicateExcelData.push({
+          "Nhóm trùng lặp": `${info.groupName} - ${info.groupEmail || 'Không có email'}`,
+          "ID": deal.ID || "",
+          "Tên học sinh": deal.studentName || "",
+          "Tên phụ huynh": deal.parentOfStudentName || "",
+          "Khối": deal.grade || "",
+          "Lớp": deal.className || "",
+          "Email": deal.email || "",
+          "Số điện thoại": deal.phone || "",
+          "Trường học": deal.schoolName || "",
+          "Phường/Quận": deal.ward || "",
+          "Địa chỉ": deal.address || "",
+          "Ngày tạo": deal.DATE_CREATE || "",
+          "Đánh dấu dữ liệu đúng (x)": info.isCorrect ? "✓" : "",
+        })
+      })
+    }
+
+    const duplicateWs = XLSX.utils.json_to_sheet(duplicateExcelData)
+
+    // Set column widths based on export type
+    let duplicateColWidths
+    if (duplicateExportGrouped) {
+      duplicateColWidths = [
+        { wch: 25 }, // Nhóm trùng lặp
+        { wch: 8 },  // Nhóm
+        { wch: 20 }, // Tên trùng
+        { wch: 30 }, // Email trùng
+        { wch: 10 }, // Số lượng
+        { wch: 10 }, // ID
+        { wch: 20 }, // Tên học sinh
+        { wch: 20 }, // Tên phụ huynh
+        { wch: 8 },  // Khối
+        { wch: 15 }, // Lớp
+        { wch: 30 }, // Email
+        { wch: 15 }, // Số điện thoại
+        { wch: 25 }, // Trường học
+        { wch: 20 }, // Phường/Quận
+        { wch: 30 }, // Địa chỉ
+        { wch: 20 }, // Ngày tạo
+        { wch: 20 }, // Đánh dấu dữ liệu đúng
+      ]
+    } else {
+      duplicateColWidths = [
+        { wch: 30 }, // Nhóm trùng lặp
+        { wch: 10 }, // ID
+        { wch: 20 }, // Tên học sinh
+        { wch: 20 }, // Tên phụ huynh
+        { wch: 8 },  // Khối
+        { wch: 15 }, // Lớp
+        { wch: 30 }, // Email
+        { wch: 15 }, // Số điện thoại
+        { wch: 25 }, // Trường học
+        { wch: 20 }, // Phường/Quận
+        { wch: 30 }, // Địa chỉ
+        { wch: 20 }, // Ngày tạo
+        { wch: 20 }, // Đánh dấu dữ liệu đúng
+      ]
+    }
+    duplicateWs['!cols'] = duplicateColWidths
+
+    XLSX.utils.book_append_sheet(wb, duplicateWs, duplicateExportGrouped ? "Dữ liệu trùng lặp (Grouped)" : "Dữ liệu trùng lặp (Flat)")
+  }
+
+  // Generate selected types string for filename
+  const selectedTypes = []
+  if (hasSummaryData) selectedTypes.push("summary")
+  if (hasDealsData) selectedTypes.push("deals")
+  if (hasDuplicateData) selectedTypes.push("duplicates")
+
+  const fileName = `export-${selectedTypes.join("-")}-${new Date().toISOString().split("T")[0]}.xlsx`
+  XLSX.writeFile(wb, fileName)
+}

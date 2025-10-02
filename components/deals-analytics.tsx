@@ -11,7 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils"
 import { format } from "date-fns"
 import * as EmailValidator from 'email-validator';
-import { exportToCSV, exportToJSON, exportToExcel, exportDuplicateDataToExcel, exportSummaryAndDuplicateToExcel } from "@/lib/export-utils"
+import { exportToCSV, exportToJSON, exportToExcel, exportDuplicateDataToExcel, exportSummaryAndDuplicateToExcel, exportMultiSheetExcel, exportMultiFormat } from "@/lib/export-utils"
 import {
   RefreshCw,
   X,
@@ -107,6 +107,13 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
 
   // State for export options
   const [duplicateExportGrouped, setDuplicateExportGrouped] = useState(true)
+  const [duplicateDisplayGrouped, setDuplicateDisplayGrouped] = useState(true)
+
+  // State for multi-type export selection
+  const [exportIncludeSummary, setExportIncludeSummary] = useState(true)
+  const [exportIncludeDeals, setExportIncludeDeals] = useState(false)
+  const [exportIncludeDuplicates, setExportIncludeDuplicates] = useState(false)
+  const [exportFormat, setExportFormat] = useState<'json' | 'csv' | 'excel'>('excel')
 
   const filterOptions = useMemo(() => {
     const grades = Array.from(new Set(deals.map((d) => d.grade).filter(Boolean))).sort()
@@ -624,6 +631,19 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
     }
   }
 
+  const handleMultiSheetExport = () => {
+    exportMultiSheetExcel({
+      includeSummary: exportIncludeSummary,
+      includeDeals: exportIncludeDeals,
+      includeDuplicates: exportIncludeDuplicates,
+      summaryData: chartData?.schoolWardDuplicateData || [],
+      dealsData: filteredDeals,
+      duplicateData,
+      correctDataSelections,
+      duplicateExportGrouped,
+    })
+  }
+
   return (
     <div className="space-y-6">
       {loading && (
@@ -661,20 +681,85 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
           </Button>
 
           {filteredDeals.length > 0 && (
-            <>
-              <Button variant="outline" onClick={() => exportToCSV(filteredDeals)} className="gap-2 bg-transparent">
-                <Download className="h-4 w-4" />
-                Export CSV
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 bg-white border rounded-md p-1">
+                <input
+                  type="checkbox"
+                  id="header-export-summary"
+                  checked={exportIncludeSummary}
+                  onChange={(e) => setExportIncludeSummary(e.target.checked)}
+                  className="w-3 h-3 text-blue-600 rounded focus:ring-2 focus:ring-blue-500 mx-1"
+                  title="Bảng tổng hợp (không theo bộ lọc hiện tại)"
+                />
+                <label htmlFor="header-export-summary" className="text-xs cursor-pointer select-none">
+                  Tổng hợp
+                </label>
+              </div>
+
+              <div className="flex items-center gap-1 bg-white border rounded-md p-1">
+                <input
+                  type="checkbox"
+                  id="header-export-deals"
+                  checked={exportIncludeDeals}
+                  onChange={(e) => setExportIncludeDeals(e.target.checked)}
+                  className="w-3 h-3 text-blue-600 rounded focus:ring-2 focus:ring-blue-500 mx-1"
+                  title="Danh sách deals hiện tại (đã áp dụng bộ lọc)"
+                />
+                <label htmlFor="header-export-deals" className="text-xs cursor-pointer select-none">
+                  Deals
+                </label>
+              </div>
+
+              {duplicateData.length > 0 && (
+                <div className="flex items-center gap-1 bg-white border rounded-md p-1">
+                  <input
+                    type="checkbox"
+                    id="header-export-duplicates"
+                    checked={exportIncludeDuplicates}
+                    onChange={(e) => setExportIncludeDuplicates(e.target.checked)}
+                    className="w-3 h-3 text-blue-600 rounded focus:ring-2 focus:ring-blue-500 mx-1"
+                    title="Danh sách duplicate"
+                  />
+                  <label htmlFor="header-export-duplicates" className="text-xs cursor-pointer select-none">
+                    Duplicate
+                  </label>
+                </div>
+              )}
+
+              <div className="h-6 w-px bg-gray-300 mx-1" />
+
+              <Select value={exportFormat} onValueChange={(value) => setExportFormat(value as 'json' | 'csv' | 'excel')}>
+                <SelectTrigger className="w-20 h-8 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="excel">Excel</SelectItem>
+                  <SelectItem value="json">JSON</SelectItem>
+                  <SelectItem value="csv">CSV</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => exportMultiFormat({
+                  format: exportFormat,
+                  includeSummary: exportIncludeSummary,
+                  includeDeals: exportIncludeDeals,
+                  includeDuplicates: exportIncludeDuplicates,
+                  summaryData: chartData?.schoolWardDuplicateData || [],
+                  dealsData: filteredDeals,
+                  duplicateData,
+                  correctDataSelections,
+                  duplicateExportGrouped,
+                })}
+                disabled={!exportIncludeSummary && !exportIncludeDeals && !exportIncludeDuplicates}
+                className="gap-2 bg-transparent h-8 px-3"
+              >
+                <Download className="h-3 w-3" />
+                Xuất
               </Button>
-              <Button variant="outline" onClick={() => exportToJSON(filteredDeals)} className="gap-2 bg-transparent">
-                <Download className="h-4 w-4" />
-                Export JSON
-              </Button>
-              <Button variant="outline" onClick={() => exportToExcel(filteredDeals)} className="gap-2 bg-transparent">
-                <Download className="h-4 w-4" />
-                Export Excel
-              </Button>
-            </>
+            </div>
           )}
           <Button variant="outline" onClick={clearData}>
             <X className="h-4 w-4" />
@@ -1038,6 +1123,8 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
 
           {/* Charts Tab */}
           <TabsContent value="charts" className="space-y-6">
+            {/* Multi-Format Export Options */}
+
             {chartData && (
               <>
                 <Card>
@@ -1221,20 +1308,28 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
                   <CardTitle>Danh sách deals ({filteredDeals.length} kết quả)</CardTitle>
                   <div className="flex items-center gap-2">
                     {filteredDeals.length > 0 && (
-                      <>
-                        <Button variant="outline" size="sm" onClick={() => exportToCSV(filteredDeals)} className="gap-1 bg-transparent">
+                      <div className="flex items-center gap-2">
+                        <Select
+                          onValueChange={(value) => {
+                            if (value === 'csv') exportToCSV(filteredDeals)
+                            else if (value === 'json') exportToJSON(filteredDeals)
+                            else if (value === 'excel') exportToExcel(filteredDeals)
+                          }}
+                        >
+                          <SelectTrigger className="w-24">
+                            <SelectValue placeholder="Xuất" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="csv">CSV</SelectItem>
+                            <SelectItem value="json">JSON</SelectItem>
+                            <SelectItem value="excel">Excel</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Button variant="outline" size="sm" className="gap-1 bg-transparent px-3">
                           <Download className="h-3 w-3" />
-                          CSV
+                          Xuất
                         </Button>
-                        <Button variant="outline" size="sm" onClick={() => exportToJSON(filteredDeals)} className="gap-1 bg-transparent">
-                          <Download className="h-3 w-3" />
-                          JSON
-                        </Button>
-                        <Button variant="outline" size="sm" onClick={() => exportToExcel(filteredDeals)} className="gap-1 bg-transparent">
-                          <Download className="h-3 w-3" />
-                          Excel
-                        </Button>
-                      </>
+                      </div>
                     )}
                     <span className="text-sm text-muted-foreground">Hiển thị:</span>
                     <Select
@@ -1359,116 +1454,202 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
                   <div className="flex justify-between items-center">
                     <CardTitle>Dữ liệu trùng lặp ({duplicateData.reduce((acc, group) => acc + group.deals.length, 0)} bản ghi trùng)</CardTitle>
                     <div className="flex items-center gap-2">
-                      <Select
-                        value={duplicateExportGrouped.toString()}
-                        onValueChange={(value) => setDuplicateExportGrouped(value === "true")}
-                      >
-                        <SelectTrigger className="w-40">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="true">Xuất theo nhóm</SelectItem>
-                          <SelectItem value="false">Xuất danh sách phẳng</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <div className="flex items-center gap-2 bg-white border rounded-md px-2 py-1">
+                        <span className="text-xs font-medium text-gray-700">Hiển thị:</span>
+                        <Select
+                          value={duplicateDisplayGrouped.toString()}
+                          onValueChange={(value) => setDuplicateDisplayGrouped(value === "true")}
+                        >
+                          <SelectTrigger className="w-32 h-7 text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="true">Theo nhóm</SelectItem>
+                            <SelectItem value="false">Danh sách phẳng</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="flex items-center gap-2 bg-white border rounded-md px-2 py-1">
+                        <span className="text-xs font-medium text-gray-700">Xuất:</span>
+                        <Select
+                          value={duplicateExportGrouped.toString()}
+                          onValueChange={(value) => setDuplicateExportGrouped(value === "true")}
+                        >
+                          <SelectTrigger className="w-36 h-7 text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="true">Theo nhóm</SelectItem>
+                            <SelectItem value="false">Danh sách phẳng</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={handleExportDuplicateData}
-                        className="gap-2 bg-transparent"
+                        className="gap-2 bg-transparent h-8 px-3"
                       >
                         <Download className="h-3 w-3" />
-                        Export Excel
+                        Xuất Excel
                       </Button>
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {duplicateData.map((group, groupIndex) => {
-                      const groupKey = `${group.name}:::${group.email || ""}`
-                      const selectedIds = correctDataSelections[groupKey] || []
+                    {/* Grouped View */}
+                    {duplicateDisplayGrouped ? (
+                      duplicateData.map((group, groupIndex) => {
+                        const groupKey = `${group.name}:::${group.email || ""}`
+                        const selectedIds = correctDataSelections[groupKey] || []
 
-                      return (
-                        <div key={groupKey} className="border rounded-lg p-4">
-                          <div className="flex items-center justify-between mb-3">
-                            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium text-sm">Tên trùng:</span>
-                                <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-medium">
-                                  {group.name}
-                                </span>
-                              </div>
-                              {group.email && (
+                        return (
+                          <div key={groupKey} className="border rounded-lg p-4">
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                                 <div className="flex items-center gap-2">
-                                  <span className="font-medium text-sm">Email trùng:</span>
-                                  <span className="bg-red-100 text-red-800 px-2 py-1 rounded text-xs font-medium">
-                                    {group.email}
+                                  <span className="font-medium text-sm">Tên trùng:</span>
+                                  <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-medium">
+                                    {group.name}
                                   </span>
                                 </div>
-                              )}
-                              <span className="text-sm text-muted-foreground">
-                                ({group.count} bản ghi) - Đã chọn: {selectedIds.length} bản ghi đúng
-                              </span>
+                                {group.email && (
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium text-sm">Email trùng:</span>
+                                    <span className="bg-red-100 text-red-800 px-2 py-1 rounded text-xs font-medium">
+                                      {group.email}
+                                    </span>
+                                  </div>
+                                )}
+                                <span className="text-sm text-muted-foreground">
+                                  ({group.count} bản ghi) - Đã chọn: {selectedIds.length} bản ghi đúng
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="overflow-x-auto">
+                              <table className="w-full border-collapse">
+                                <thead>
+                                  <tr className="border-b bg-muted/30">
+                                    <th className="text-center p-2 font-medium text-sm">Đánh dấu dữ liệu đúng (x)</th>
+                                    <th className="text-left p-2 font-medium text-sm">ID</th>
+                                    <th className="text-left p-2 font-medium text-sm">Học sinh</th>
+                                    <th className="text-left p-2 font-medium text-sm">Tên phụ huynh</th>
+                                    <th className="text-left p-2 font-medium text-sm">Khối</th>
+                                    <th className="text-left p-2 font-medium text-sm">Lớp</th>
+                                    <th className="text-left p-2 font-medium text-sm">Phone</th>
+                                    <th className="text-left p-2 font-medium text-sm">Trường</th>
+                                    <th className="text-left p-2 font-medium text-sm">Phường/Quận</th>
+                                    <th className="text-left p-2 font-medium text-sm">Ngày tạo</th>
+                                    <th className="text-center p-2 font-medium text-sm">Thao tác</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {group.deals.map((deal, index) => (
+                                    <tr key={deal.ID} className={`border-b hover:bg-muted/20 ${selectedIds.includes(deal.ID) ? 'bg-blue-50' : ''}`}>
+                                      <td className="p-2 text-center">
+                                        <input
+                                          type="checkbox"
+                                          checked={selectedIds.includes(deal.ID)}
+                                          onChange={() => toggleCorrectDataSelection(groupKey, deal.ID)}
+                                          className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                                        />
+                                      </td>
+                                      <td className="p-2 text-sm">{deal.ID}</td>
+                                      <td className="p-2 text-sm">{deal.studentName || "-"}</td>
+                                      <td className="p-2 text-sm">{deal.parentOfStudentName || "-"}</td>
+                                      <td className="p-2 text-sm">{deal.grade || "-"}</td>
+                                      <td className="p-2 text-sm">{deal.className || "-"}</td>
+                                      <td className="p-2 text-sm">{deal.phone || "-"}</td>
+                                      <td className="p-2 text-sm">{deal.schoolName || "-"}</td>
+                                      <td className="p-2 text-sm">{deal.ward || "-"}</td>
+                                      <td className="p-2 text-sm">{deal.DATE_CREATE ? new Date(deal.DATE_CREATE).toLocaleDateString('vi-VN') : "-"}</td>
+                                      <td className="p-2 text-center">
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => deleteDuplicateDeal(deal.ID)}
+                                          className="h-8 px-2 text-xs hover:bg-red-50 hover:border-red-200 hover:text-red-700"
+                                        >
+                                          <X className="h-3 w-3 mr-1" />
+                                          Xóa
+                                        </Button>
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
                             </div>
                           </div>
+                        )
+                      })
+                    ) : (
+                      /* Flat View */
+                      <div className="overflow-x-auto">
+                        <table className="w-full border-collapse">
+                          <thead>
+                            <tr className="border-b bg-muted/30">
+                              <th className="text-center p-3 font-medium">Đánh dấu dữ liệu đúng (x)</th>
+                              <th className="text-left p-3 font-medium">Nhóm trùng lặp</th>
+                              <th className="text-left p-3 font-medium">ID</th>
+                              <th className="text-left p-3 font-medium">Học sinh</th>
+                              <th className="text-left p-3 font-medium">Tên phụ huynh</th>
+                              <th className="text-left p-3 font-medium">Khối</th>
+                              <th className="text-left p-3 font-medium">Lớp</th>
+                              <th className="text-left p-3 font-medium">Phone</th>
+                              <th className="text-left p-3 font-medium">Trường</th>
+                              <th className="text-left p-3 font-medium">Phường/Quận</th>
+                              <th className="text-left p-3 font-medium">Ngày tạo</th>
+                              <th className="text-center p-3 font-medium">Thao tác</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {duplicateData.map((group) => {
+                              const groupKey = `${group.name}:::${group.email || ""}`
+                              const selectedIds = correctDataSelections[groupKey] || []
+                              const groupLabel = `${group.name} - ${group.email || 'Không có email'}`
 
-                          <div className="overflow-x-auto">
-                            <table className="w-full border-collapse">
-                              <thead>
-                                <tr className="border-b bg-muted/30">
-                                  <th className="text-center p-2 font-medium text-sm">Đánh dấu dữ liệu đúng (x)</th>
-                                  <th className="text-left p-2 font-medium text-sm">ID</th>
-                                  <th className="text-left p-2 font-medium text-sm">Học sinh</th>
-                                  <th className="text-left p-2 font-medium text-sm">Tên phụ huynh</th>
-                                  <th className="text-left p-2 font-medium text-sm">Khối</th>
-                                  <th className="text-left p-2 font-medium text-sm">Lớp</th>
-                                  <th className="text-left p-2 font-medium text-sm">Phone</th>
-                                  <th className="text-left p-2 font-medium text-sm">Trường</th>
-                                  <th className="text-left p-2 font-medium text-sm">Phường/Quận</th>
-                                  <th className="text-left p-2 font-medium text-sm">Ngày tạo</th>
-                                  <th className="text-center p-2 font-medium text-sm">Thao tác</th>
+                              return group.deals.map((deal, dealIndex) => (
+                                <tr key={deal.ID} className={`border-b hover:bg-muted/20 ${selectedIds.includes(deal.ID) ? 'bg-blue-50' : ''}`}>
+                                  <td className="p-3 text-center">
+                                    <input
+                                      type="checkbox"
+                                      checked={selectedIds.includes(deal.ID)}
+                                      onChange={() => toggleCorrectDataSelection(groupKey, deal.ID)}
+                                      className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                                    />
+                                  </td>
+                                  <td className="p-3 text-sm">{groupLabel}</td>
+                                  <td className="p-3 text-sm">{deal.ID}</td>
+                                  <td className="p-3 text-sm">{deal.studentName || "-"}</td>
+                                  <td className="p-3 text-sm">{deal.parentOfStudentName || "-"}</td>
+                                  <td className="p-3 text-sm">{deal.grade || "-"}</td>
+                                  <td className="p-3 text-sm">{deal.className || "-"}</td>
+                                  <td className="p-3 text-sm">{deal.phone || "-"}</td>
+                                  <td className="p-3 text-sm">{deal.schoolName || "-"}</td>
+                                  <td className="p-3 text-sm">{deal.ward || "-"}</td>
+                                  <td className="p-3 text-sm">{deal.DATE_CREATE ? new Date(deal.DATE_CREATE).toLocaleDateString('vi-VN') : "-"}</td>
+                                  <td className="p-3 text-center">
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => deleteDuplicateDeal(deal.ID)}
+                                      className="h-8 px-2 text-xs hover:bg-red-50 hover:border-red-200 hover:text-red-700"
+                                    >
+                                      <X className="h-3 w-3 mr-1" />
+                                      Xóa
+                                    </Button>
+                                  </td>
                                 </tr>
-                              </thead>
-                              <tbody>
-                                {group.deals.map((deal, index) => (
-                                  <tr key={deal.ID} className={`border-b hover:bg-muted/20 ${selectedIds.includes(deal.ID) ? 'bg-blue-50' : ''}`}>
-                                    <td className="p-2 text-center">
-                                      <input
-                                        type="checkbox"
-                                        checked={selectedIds.includes(deal.ID)}
-                                        onChange={() => toggleCorrectDataSelection(groupKey, deal.ID)}
-                                        className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
-                                      />
-                                    </td>
-                                    <td className="p-2 text-sm">{deal.ID}</td>
-                                    <td className="p-2 text-sm">{deal.studentName || "-"}</td>
-                                    <td className="p-2 text-sm">{deal.parentOfStudentName || "-"}</td>
-                                    <td className="p-2 text-sm">{deal.grade || "-"}</td>
-                                    <td className="p-2 text-sm">{deal.className || "-"}</td>
-                                    <td className="p-2 text-sm">{deal.phone || "-"}</td>
-                                    <td className="p-2 text-sm">{deal.schoolName || "-"}</td>
-                                    <td className="p-2 text-sm">{deal.ward || "-"}</td>
-                                    <td className="p-2 text-sm">{deal.DATE_CREATE ? new Date(deal.DATE_CREATE).toLocaleDateString('vi-VN') : "-"}</td>
-                                    <td className="p-2 text-center">
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => deleteDuplicateDeal(deal.ID)}
-                                        className="h-8 px-2 text-xs hover:bg-red-50 hover:border-red-200 hover:text-red-700"
-                                      >
-                                        <X className="h-3 w-3 mr-1" />
-                                        Xóa
-                                      </Button>
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        </div>
-                      )
-                    })}
+                              ))
+                            }).flat()}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
