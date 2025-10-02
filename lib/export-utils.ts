@@ -1,6 +1,52 @@
 import { Deal } from "@/components/deals-analytics"
-import * as XLSX from 'xlsx'
+import * as XLSX from 'sheetjs-style'
 
+function styleSheetHeaderAndBorder(ws: XLSX.WorkSheet) {
+  if (!ws["!ref"]) return ws; // không có data thì thôi
+
+  const range = XLSX.utils.decode_range(ws["!ref"]);
+  const headerRow = range.s.r; // thường là 0
+
+  const purpleFill = {
+    patternType: "solid",
+    fgColor: { rgb: "800080" }, // tím
+  };
+  const whiteFont = { color: { rgb: "FFFFFF" }, bold: true };
+  const thinBorder = {
+    top: { style: "thin", color: { auto: 1 } },
+    bottom: { style: "thin", color: { auto: 1 } },
+    left: { style: "thin", color: { auto: 1 } },
+    right: { style: "thin", color: { auto: 1 } },
+  };
+
+  // Header
+  for (let C = range.s.c; C <= range.e.c; ++C) {
+    const cellAddress = XLSX.utils.encode_cell({ r: headerRow, c: C });
+    const cell = ws[cellAddress];
+    if (cell) {
+      cell.s = {
+        fill: purpleFill,
+        font: whiteFont,
+        border: thinBorder,
+        alignment: { horizontal: "center", vertical: "center" },
+      };
+    }
+  }
+
+  // Các ô còn lại: border
+  for (let R = headerRow + 1; R <= range.e.r; ++R) {
+    for (let C = range.s.c; C <= range.e.c; ++C) {
+      const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+      const cell = ws[cellAddress];
+      if (cell) {
+        // nếu cell đã có style header thì merge, còn lại chỉ border
+        cell.s = { ...(cell.s || {}), border: thinBorder };
+      }
+    }
+  }
+
+  return ws;
+}
 export const exportToCSV = (filteredDeals: Deal[]) => {
   if (filteredDeals.length === 0) return
 
@@ -121,6 +167,7 @@ export const exportToExcel = (filteredDeals: Deal[]) => {
 
   // Create workbook
   const wb = XLSX.utils.book_new()
+  styleSheetHeaderAndBorder(ws);
   XLSX.utils.book_append_sheet(wb, ws, "Deals Data")
 
   // Generate and download file
@@ -307,6 +354,7 @@ export const exportDuplicateDataToExcel = (
   // Create workbook
   const wb = XLSX.utils.book_new()
   const sheetName = exportGrouped ? "Duplicate Data (Grouped)" : "Duplicate Data (Flat)"
+  styleSheetHeaderAndBorder(ws);
   XLSX.utils.book_append_sheet(wb, ws, sheetName)
 
   // Generate and download file
@@ -366,6 +414,7 @@ export const exportSummaryAndDuplicateToExcel = (
       { wch: 15 }, // Tỷ lệ trùng
     ]
     summaryWs['!cols'] = summaryColWidths
+    styleSheetHeaderAndBorder(summaryWs);
     XLSX.utils.book_append_sheet(wb, summaryWs, "Bảng tổng hợp")
   }
 
@@ -523,7 +572,7 @@ export const exportSummaryAndDuplicateToExcel = (
       ]
     }
     duplicateWs['!cols'] = duplicateColWidths
-
+    styleSheetHeaderAndBorder(duplicateWs);
     XLSX.utils.book_append_sheet(wb, duplicateWs, exportDuplicateGrouped ? "Dữ liệu trùng lặp (Grouped)" : "Dữ liệu trùng lặp (Flat)")
   }
 
@@ -759,6 +808,7 @@ export const exportMultiSheetExcel = (
       { wch: 15 }, // Tỷ lệ trùng
     ]
     summaryWs['!cols'] = summaryColWidths
+    styleSheetHeaderAndBorder(summaryWs);
     XLSX.utils.book_append_sheet(wb, summaryWs, "Bảng tổng hợp")
   }
 
@@ -812,6 +862,7 @@ export const exportMultiSheetExcel = (
       { wch: 20 }, // Ngày tạo
     ]
     dealsWs['!cols'] = dealsColWidths
+    styleSheetHeaderAndBorder(dealsWs);
     XLSX.utils.book_append_sheet(wb, dealsWs, "Danh sách deals")
   }
 
@@ -968,7 +1019,7 @@ export const exportMultiSheetExcel = (
       ]
     }
     duplicateWs['!cols'] = duplicateColWidths
-
+    styleSheetHeaderAndBorder(duplicateWs);
     XLSX.utils.book_append_sheet(wb, duplicateWs, duplicateExportGrouped ? "Dữ liệu trùng lặp (Grouped)" : "Dữ liệu trùng lặp (Flat)")
   }
 

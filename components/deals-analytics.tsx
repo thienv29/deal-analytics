@@ -104,7 +104,7 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
   const [correctDataSelections, setCorrectDataSelections] = useState<Record<string, string[]>>({})
 
   // State for export options
-  const [duplicateExportGrouped, setDuplicateExportGrouped] = useState(true)
+  const [duplicateExportGrouped, setDuplicateExportGrouped] = useState(false)
   const [duplicateDisplayGrouped, setDuplicateDisplayGrouped] = useState(true)
 
   // State for multi-type export selection
