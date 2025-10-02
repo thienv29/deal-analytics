@@ -49,6 +49,23 @@ function styleSheetHeaderAndBorder(ws: XLSX.WorkSheet) {
 }
 
 // Function to normalize text for duplicate detection
+function sortDealsByEmail(deals: Deal[]): Deal[] {
+  return [...deals].sort((a, b) => {
+    const emailA = a.email?.trim() || ""
+    const emailB = b.email?.trim() || ""
+
+    if (emailA && emailB) {
+      return emailA.localeCompare(emailB)
+    } else if (emailA) {
+      return -1 // emailA has value, comes before emailB (empty)
+    } else if (emailB) {
+      return 1 // emailB has value, comes after emailA (empty)
+    } else {
+      return 0 // both empty
+    }
+  })
+}
+
 function normalizeTextForDuplicates(text?: string): string {
   if (!text || !text.trim()) return ""
   return text
@@ -205,21 +222,7 @@ export const exportToExcel = (filteredDeals: Deal[]) => {
     }
   }
 
-  // Sort deals by email (empty emails at the end)
-  const sortedDeals = [...filteredDeals].sort((a, b) => {
-    const emailA = a.email?.trim() || ""
-    const emailB = b.email?.trim() || ""
-
-    if (emailA && emailB) {
-      return emailA.localeCompare(emailB)
-    } else if (emailA) {
-      return -1 // emailA has value, comes before emailB (empty)
-    } else if (emailB) {
-      return 1 // emailB has value, comes after emailA (empty)
-    } else {
-      return 0 // both empty
-    }
-  })
+  const sortedDeals = sortDealsByEmail(filteredDeals)
 
   // Prepare data for Excel export
   const excelData = sortedDeals.map((deal) => ({
@@ -384,21 +387,7 @@ export const exportDuplicateDataToExcel = (
       })
     })
 
-      // Sort deals by email (empty emails at the end)
-      const sortedDeals = [...allDeals].sort((a, b) => {
-        const emailA = a.email?.trim() || ""
-        const emailB = b.email?.trim() || ""
-
-        if (emailA && emailB) {
-          return emailA.localeCompare(emailB)
-        } else if (emailA) {
-          return -1 // emailA has value, comes before emailB (empty)
-        } else if (emailB) {
-          return 1 // emailB has value, comes after emailA (empty)
-        } else {
-          return 0 // both empty
-        }
-      })
+      const sortedDeals = sortDealsByEmail(allDeals)
 
       sortedDeals.forEach((deal) => {
         const info = dealInfo[deal.ID]
@@ -618,21 +607,7 @@ export const exportSummaryAndDuplicateToExcel = (
         })
       })
 
-      // Sort deals by email (empty emails at the end)
-      const sortedDeals = [...allDeals].sort((a, b) => {
-        const emailA = a.email?.trim() || ""
-        const emailB = b.email?.trim() || ""
-
-        if (emailA && emailB) {
-          return emailA.localeCompare(emailB)
-        } else if (emailA) {
-          return -1 // emailA has value, comes before emailB (empty)
-        } else if (emailB) {
-          return 1 // emailB has value, comes after emailA (empty)
-        } else {
-          return 0 // both empty
-        }
-      })
+      const sortedDeals = sortDealsByEmail(allDeals)
 
       sortedDeals.forEach((deal) => {
         const info = dealInfo[deal.ID]
@@ -957,21 +932,7 @@ export const exportMultiSheetExcel = (
 
   // Sheet 2: Deals List (if selected and has data)
   if (hasDealsData) {
-    // Sort deals by email (empty emails at the end)
-    const sortedDeals = [...dealsData].sort((a, b) => {
-      const emailA = a.email?.trim() || ""
-      const emailB = b.email?.trim() || ""
-
-      if (emailA && emailB) {
-        return emailA.localeCompare(emailB)
-      } else if (emailA) {
-        return -1 // emailA has value, comes before emailB (empty)
-      } else if (emailB) {
-        return 1 // emailB has value, comes after emailA (empty)
-      } else {
-        return 0 // both empty
-      }
-    })
+    const sortedDeals = sortDealsByEmail(dealsData)
 
     const dealsExcelData = sortedDeals.map((deal) => ({
       "ID": deal.ID || "",
@@ -1097,21 +1058,7 @@ export const exportMultiSheetExcel = (
         })
       })
 
-      // Sort deals by email (empty emails at the end)
-      const sortedDeals = [...allDeals].sort((a, b) => {
-        const emailA = a.email?.trim() || ""
-        const emailB = b.email?.trim() || ""
-
-        if (emailA && emailB) {
-          return emailA.localeCompare(emailB)
-        } else if (emailA) {
-          return -1 // emailA has value, comes before emailB (empty)
-        } else if (emailB) {
-          return 1 // emailB has value, comes after emailA (empty)
-        } else {
-          return 0 // both empty
-        }
-      })
+      const sortedDeals = sortDealsByEmail(allDeals)
 
       sortedDeals.forEach((deal) => {
         const info = dealInfo[deal.ID]
