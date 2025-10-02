@@ -345,8 +345,8 @@ export const exportSummaryAndDuplicateToExcel = (
 
   // Sheet 1: Summary Data
   if (summaryData.length > 0) {
-    const summaryExcelData = summaryData.map((item: any) => ({
-      "STT": "",
+    const summaryExcelData = summaryData.map((item: any, index: number) => ({
+      "STT": index + 1,
       "Trường học": item.school || "",
       "Phường/Quận": item.ward || "",
       "Tổng deals": item.total || 0,
