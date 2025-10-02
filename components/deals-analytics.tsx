@@ -837,24 +837,200 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
       )}
 
       {deals.length > 0 && (
-        <Tabs defaultValue="filters" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="filters" className="flex items-center gap-2">
-              <Filter className="h-4 w-4" />
-              Bộ lọc & Tìm kiếm
-            </TabsTrigger>
+        <Tabs defaultValue="table" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="charts" className="flex items-center gap-2">
               <BarChart3 className="h-4 w-4" />
-              Biểu đồ phân tích
+              Biểu đồ & Xuất dữ liệu
             </TabsTrigger>
             <TabsTrigger value="table" className="flex items-center gap-2">
               <Table className="h-4 w-4" />
-              Bảng dữ liệu
+              Bảng & Bộ lọc
             </TabsTrigger>
           </TabsList>
 
-          {/* Filters Tab */}
-          <TabsContent value="filters" className="space-y-6">
+
+          {/* Charts Tab */}
+          <TabsContent value="charts" className="space-y-6">
+            {/* Multi-Format Export Options */}
+
+            {chartData && (
+              <>
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <TrendingUp className="h-5 w-5" />
+                      Xu hướng deals theo ngày (30 ngày gần nhất)
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <ComposedChart data={chartData.dailyDealsData}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis
+                          dataKey="formattedDate"
+                          angle={-45}
+                          textAnchor="end"
+                          height={80}
+                          fontSize={11}
+                          interval={Math.max(0, Math.floor(chartData.dailyDealsData.length / 10))}
+                        />
+                        <YAxis />
+                        <Tooltip
+                          content={({ active, payload, label }) => {
+                            if (active && payload && payload.length) {
+                              const data = payload[0]?.payload
+                              return (
+                                <div className="bg-white p-3 border rounded shadow">
+                                  <p className="font-medium">{label}</p>
+                                  <p className="text-blue-600">Số deals: {data?.deals}</p>
+                                </div>
+                              )
+                            }
+                            return null
+                          }}
+                        />
+                        <Bar dataKey="deals" fill="#3b82f6" name="Số deals" />
+                        <Line
+                          type="monotone"
+                          dataKey="deals"
+                          stroke="#ef4444"
+                          strokeWidth={2}
+                          dot={{ fill: "#ef4444", strokeWidth: 2, r: 4 }}
+                          name="Xu hướng"
+                        />
+                      </ComposedChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+
+                {/* School-ward duplicate analysis chart */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Users className="h-5 w-5" />
+                      Phân tích trùng lặp theo cặp Trường - Phường
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={500}>
+                      <ComposedChart data={chartData.schoolWardDuplicateData}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis
+                          dataKey="schoolWard"
+                          angle={-45}
+                          textAnchor="end"
+                          height={120}
+                          fontSize={10}
+                          interval={0}
+                        />
+                        <YAxis yAxisId="left" />
+                        <YAxis yAxisId="right" orientation="right" />
+                        <Tooltip
+                          content={({ active, payload, label }) => {
+                            if (active && payload && payload.length) {
+                              const data = payload[0]?.payload
+                              return (
+                                <div className="bg-white p-3 border rounded shadow">
+                                  <p className="font-medium">{label}</p>
+                                  <p>Tổng: {data?.total}</p>
+                                  <p>Duy nhất: {data?.unique}</p>
+                                  <p>Trùng lặp: {data?.duplicates}</p>
+                                  <p>Tỷ lệ trùng: {data?.duplicateRate}%</p>
+                                </div>
+                              )
+                            }
+                            return null
+                          }}
+                        />
+                        <Bar yAxisId="left" dataKey="total" fill="#8884d8" name="Tổng" />
+                        <Bar yAxisId="left" dataKey="unique" fill="#82ca9d" name="Duy nhất" />
+                        <Bar yAxisId="left" dataKey="duplicates" fill="#ff7300" name="Trùng lặp" />
+                        <Line
+                          yAxisId="right"
+                          type="monotone"
+                          dataKey="duplicateRate"
+                          stroke="#ff0000"
+                          strokeWidth={2}
+                          name="Tỷ lệ trùng %"
+                        />
+                      </ComposedChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+
+                {/* School-ward deals summary table */}
+                <Card>
+                  <CardHeader>
+                    <div className="flex justify-between items-center">
+                      <CardTitle className="flex items-center gap-2">
+                        <MapPin className="h-5 w-5" />
+                        Bảng tổng hợp Trường - Phường
+                      </CardTitle>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleExportSummaryAndDuplicate}
+                        className="gap-2 bg-transparent"
+                      >
+                        <Download className="h-3 w-3" />
+                        Xuất bảng tổng hợp + trùng lặp
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="overflow-x-auto">
+                      <table className="w-full border-collapse">
+                        <thead>
+                          <tr className="border-b bg-muted/50">
+                            <th className="text-left p-3 font-medium">STT</th>
+                            {renderSortableHeader("school", "Trường học")}
+                            {renderSortableHeader("ward", "Phường/Quận")}
+                            {renderSortableHeader("total", "Tổng deals", "right")}
+                            {renderSortableHeader("unique", "Duy nhất", "right")}
+                            {renderSortableHeader("duplicates", "Trùng lặp", "right")}
+                            {renderSortableHeader("duplicateRate", "Tỷ lệ trùng", "right")}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {chartData.schoolWardDuplicateData.map((item: any, index: number) => (
+                            <tr key={item.schoolWard} className="border-b hover:bg-muted/30">
+                              <td className="p-3 text-sm text-muted-foreground">{index + 1}</td>
+                              <td className="p-3 text-sm font-medium">{item.school}</td>
+                              <td className="p-3 text-sm">{item.ward}</td>
+                              <td className="p-3 text-sm text-right font-medium">{item.total}</td>
+                              <td className="p-3 text-sm text-right text-green-600">{item.unique}</td>
+                              <td className="p-3 text-sm text-right text-orange-600">{item.duplicates}</td>
+                              <td className="p-3 text-sm text-right">
+                                <span
+                                  className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                    Number.parseFloat(item.duplicateRate) > 20
+                                      ? "bg-red-100 text-red-800"
+                                      : Number.parseFloat(item.duplicateRate) > 10
+                                        ? "bg-orange-100 text-orange-800"
+                                        : "bg-green-100 text-green-800"
+                                  }`}
+                                >
+                                  {item.duplicateRate}%
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {chartData.schoolWardDuplicateData.length === 0 && (
+                      <div className="text-center py-8 text-muted-foreground">Không có dữ liệu để hiển thị</div>
+                    )}
+                  </CardContent>
+                </Card>
+              </>
+            )}
+          </TabsContent>
+
+          {/* Table Tab */}
+          <TabsContent value="table" className="space-y-6">
             <Card>
               <CardHeader>
                 <CardTitle>Bộ lọc dữ liệu</CardTitle>
@@ -1119,189 +1295,7 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
                 </div>
               </CardContent>
             </Card>
-          </TabsContent>
 
-          {/* Charts Tab */}
-          <TabsContent value="charts" className="space-y-6">
-            {/* Multi-Format Export Options */}
-
-            {chartData && (
-              <>
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <TrendingUp className="h-5 w-5" />
-                      Xu hướng deals theo ngày (30 ngày gần nhất)
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <ResponsiveContainer width="100%" height={300}>
-                      <ComposedChart data={chartData.dailyDealsData}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis
-                          dataKey="formattedDate"
-                          angle={-45}
-                          textAnchor="end"
-                          height={80}
-                          fontSize={11}
-                          interval={Math.max(0, Math.floor(chartData.dailyDealsData.length / 10))}
-                        />
-                        <YAxis />
-                        <Tooltip
-                          content={({ active, payload, label }) => {
-                            if (active && payload && payload.length) {
-                              const data = payload[0]?.payload
-                              return (
-                                <div className="bg-white p-3 border rounded shadow">
-                                  <p className="font-medium">{label}</p>
-                                  <p className="text-blue-600">Số deals: {data?.deals}</p>
-                                </div>
-                              )
-                            }
-                            return null
-                          }}
-                        />
-                        <Bar dataKey="deals" fill="#3b82f6" name="Số deals" />
-                        <Line
-                          type="monotone"
-                          dataKey="deals"
-                          stroke="#ef4444"
-                          strokeWidth={2}
-                          dot={{ fill: "#ef4444", strokeWidth: 2, r: 4 }}
-                          name="Xu hướng"
-                        />
-                      </ComposedChart>
-                    </ResponsiveContainer>
-                  </CardContent>
-                </Card>
-
-                {/* School-ward duplicate analysis chart */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Users className="h-5 w-5" />
-                      Phân tích trùng lặp theo cặp Trường - Phường
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <ResponsiveContainer width="100%" height={500}>
-                      <ComposedChart data={chartData.schoolWardDuplicateData}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis
-                          dataKey="schoolWard"
-                          angle={-45}
-                          textAnchor="end"
-                          height={120}
-                          fontSize={10}
-                          interval={0}
-                        />
-                        <YAxis yAxisId="left" />
-                        <YAxis yAxisId="right" orientation="right" />
-                        <Tooltip
-                          content={({ active, payload, label }) => {
-                            if (active && payload && payload.length) {
-                              const data = payload[0]?.payload
-                              return (
-                                <div className="bg-white p-3 border rounded shadow">
-                                  <p className="font-medium">{label}</p>
-                                  <p>Tổng: {data?.total}</p>
-                                  <p>Duy nhất: {data?.unique}</p>
-                                  <p>Trùng lặp: {data?.duplicates}</p>
-                                  <p>Tỷ lệ trùng: {data?.duplicateRate}%</p>
-                                </div>
-                              )
-                            }
-                            return null
-                          }}
-                        />
-                        <Bar yAxisId="left" dataKey="total" fill="#8884d8" name="Tổng" />
-                        <Bar yAxisId="left" dataKey="unique" fill="#82ca9d" name="Duy nhất" />
-                        <Bar yAxisId="left" dataKey="duplicates" fill="#ff7300" name="Trùng lặp" />
-                        <Line
-                          yAxisId="right"
-                          type="monotone"
-                          dataKey="duplicateRate"
-                          stroke="#ff0000"
-                          strokeWidth={2}
-                          name="Tỷ lệ trùng %"
-                        />
-                      </ComposedChart>
-                    </ResponsiveContainer>
-                  </CardContent>
-                </Card>
-
-                {/* School-ward deals summary table */}
-                <Card>
-                  <CardHeader>
-                    <div className="flex justify-between items-center">
-                      <CardTitle className="flex items-center gap-2">
-                        <MapPin className="h-5 w-5" />
-                        Bảng tổng hợp Trường - Phường
-                      </CardTitle>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleExportSummaryAndDuplicate}
-                        className="gap-2 bg-transparent"
-                      >
-                        <Download className="h-3 w-3" />
-                        Xuất bảng tổng hợp + trùng lặp
-                      </Button>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="overflow-x-auto">
-                      <table className="w-full border-collapse">
-                        <thead>
-                          <tr className="border-b bg-muted/50">
-                            <th className="text-left p-3 font-medium">STT</th>
-                            {renderSortableHeader("school", "Trường học")}
-                            {renderSortableHeader("ward", "Phường/Quận")}
-                            {renderSortableHeader("total", "Tổng deals", "right")}
-                            {renderSortableHeader("unique", "Duy nhất", "right")}
-                            {renderSortableHeader("duplicates", "Trùng lặp", "right")}
-                            {renderSortableHeader("duplicateRate", "Tỷ lệ trùng", "right")}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {chartData.schoolWardDuplicateData.map((item: any, index: number) => (
-                            <tr key={item.schoolWard} className="border-b hover:bg-muted/30">
-                              <td className="p-3 text-sm text-muted-foreground">{index + 1}</td>
-                              <td className="p-3 text-sm font-medium">{item.school}</td>
-                              <td className="p-3 text-sm">{item.ward}</td>
-                              <td className="p-3 text-sm text-right font-medium">{item.total}</td>
-                              <td className="p-3 text-sm text-right text-green-600">{item.unique}</td>
-                              <td className="p-3 text-sm text-right text-orange-600">{item.duplicates}</td>
-                              <td className="p-3 text-sm text-right">
-                                <span
-                                  className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                    Number.parseFloat(item.duplicateRate) > 20
-                                      ? "bg-red-100 text-red-800"
-                                      : Number.parseFloat(item.duplicateRate) > 10
-                                        ? "bg-orange-100 text-orange-800"
-                                        : "bg-green-100 text-green-800"
-                                  }`}
-                                >
-                                  {item.duplicateRate}%
-                                </span>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-
-                    {chartData.schoolWardDuplicateData.length === 0 && (
-                      <div className="text-center py-8 text-muted-foreground">Không có dữ liệu để hiển thị</div>
-                    )}
-                  </CardContent>
-                </Card>
-              </>
-            )}
-          </TabsContent>
-
-          {/* Table Tab */}
-          <TabsContent value="table" className="space-y-6">
             <Card>
               <CardHeader>
                 <div className="flex justify-between items-center">
