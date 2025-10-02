@@ -47,6 +47,80 @@ function styleSheetHeaderAndBorder(ws: XLSX.WorkSheet) {
 
   return ws;
 }
+
+// Function to normalize text for duplicate detection
+function normalizeTextForDuplicates(text?: string): string {
+  if (!text || !text.trim()) return ""
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove accents
+    .replace(/đ/g, 'd') // Replace đ with d
+    .replace(/Đ/g, 'D')
+    .trim()
+}
+
+function styleDealsSheetWithDuplicates(ws: XLSX.WorkSheet, dealsData: Deal[]) {
+  if (!ws["!ref"]) return ws;
+
+  // First apply basic styling
+  styleSheetHeaderAndBorder(ws);
+
+  // Detect duplicate groups
+  const duplicateGroups: Record<string, Set<number>> = {} // key -> set of row indices
+  const normalizedDeals = dealsData.map((deal, index) => {
+    const studentName = normalizeTextForDuplicates(deal.studentName)
+    const parentName = normalizeTextForDuplicates(deal.parentOfStudentName)
+    const email = deal.email?.trim().toLowerCase() || ""
+
+    // Use whichever name is available (student name takes precedence)
+    const normalizedName = studentName || parentName
+
+    return {
+      normalizedName,
+      email,
+      rowIndex: index + 1, // +1 because header is row 0
+      key: normalizedName ? `${normalizedName}:::${email}` : ""
+    }
+  })
+
+  // Group by duplicate key
+  normalizedDeals.forEach((item, index) => {
+    if (item.key) {
+      if (!duplicateGroups[item.key]) {
+        duplicateGroups[item.key] = new Set()
+      }
+      duplicateGroups[item.key].add(item.rowIndex)
+    }
+  })
+
+  // Apply yellow background to duplicate rows (where group has more than 1 item)
+  const yellowFill = {
+    patternType: "solid",
+    fgColor: { rgb: "FFFF00" }, // yellow
+  };
+
+  const range = XLSX.utils.decode_range(ws["!ref"]);
+
+  Object.values(duplicateGroups).forEach(rowIndices => {
+    if (rowIndices.size > 1) { // Only highlight if more than 1 duplicate
+      rowIndices.forEach(rowIndex => {
+        for (let C = range.s.c; C <= range.e.c; ++C) {
+          const cellAddress = XLSX.utils.encode_cell({ r: rowIndex, c: C });
+          const cell = ws[cellAddress];
+          if (cell) {
+            cell.s = {
+              ...(cell.s || {}),
+              fill: yellowFill
+            };
+          }
+        }
+      })
+    }
+  })
+
+  return ws;
+}
 export const exportToCSV = (filteredDeals: Deal[]) => {
   if (filteredDeals.length === 0) return
 
@@ -862,7 +936,7 @@ export const exportMultiSheetExcel = (
       { wch: 20 }, // Ngày tạo
     ]
     dealsWs['!cols'] = dealsColWidths
-    styleSheetHeaderAndBorder(dealsWs);
+    styleDealsSheetWithDuplicates(dealsWs, dealsData);
     XLSX.utils.book_append_sheet(wb, dealsWs, "Danh sách deals")
   }
 
