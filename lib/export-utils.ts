@@ -205,8 +205,24 @@ export const exportToExcel = (filteredDeals: Deal[]) => {
     }
   }
 
+  // Sort deals by email (empty emails at the end)
+  const sortedDeals = [...filteredDeals].sort((a, b) => {
+    const emailA = a.email?.trim() || ""
+    const emailB = b.email?.trim() || ""
+
+    if (emailA && emailB) {
+      return emailA.localeCompare(emailB)
+    } else if (emailA) {
+      return -1 // emailA has value, comes before emailB (empty)
+    } else if (emailB) {
+      return 1 // emailB has value, comes after emailA (empty)
+    } else {
+      return 0 // both empty
+    }
+  })
+
   // Prepare data for Excel export
-  const excelData = filteredDeals.map((deal) => ({
+  const excelData = sortedDeals.map((deal) => ({
     "ID": deal.ID || "",
     "Tên học sinh": deal.studentName || "",
     "Tên phụ huynh": deal.parentOfStudentName || "",
@@ -368,24 +384,40 @@ export const exportDuplicateDataToExcel = (
       })
     })
 
-    allDeals.forEach((deal) => {
-      const info = dealInfo[deal.ID]
-      excelData.push({
-        "Nhóm trùng lặp": `${info.groupName} - ${info.groupEmail || 'Không có email'}`,
-        "ID": deal.ID || "",
-        "Tên học sinh": deal.studentName || "",
-        "Tên phụ huynh": deal.parentOfStudentName || "",
-        "Khối": deal.grade || "",
-        "Lớp": deal.className || "",
-        "Email": deal.email || "",
-        "Số điện thoại": deal.phone || "",
-        "Trường học": deal.schoolName || "",
-        "Phường/Quận": deal.ward || "",
-        "Địa chỉ": deal.address || "",
-        "Ngày tạo": formatVietnamDateTime(deal.DATE_CREATE),
-        "Đánh dấu dữ liệu đúng (x)": info.isCorrect ? "✓" : "",
+      // Sort deals by email (empty emails at the end)
+      const sortedDeals = [...allDeals].sort((a, b) => {
+        const emailA = a.email?.trim() || ""
+        const emailB = b.email?.trim() || ""
+
+        if (emailA && emailB) {
+          return emailA.localeCompare(emailB)
+        } else if (emailA) {
+          return -1 // emailA has value, comes before emailB (empty)
+        } else if (emailB) {
+          return 1 // emailB has value, comes after emailA (empty)
+        } else {
+          return 0 // both empty
+        }
       })
-    })
+
+      sortedDeals.forEach((deal) => {
+        const info = dealInfo[deal.ID]
+        excelData.push({
+          "Nhóm trùng lặp": `${info.groupName} - ${info.groupEmail || 'Không có email'}`,
+          "ID": deal.ID || "",
+          "Tên học sinh": deal.studentName || "",
+          "Tên phụ huynh": deal.parentOfStudentName || "",
+          "Khối": deal.grade || "",
+          "Lớp": deal.className || "",
+          "Email": deal.email || "",
+          "Số điện thoại": deal.phone || "",
+          "Trường học": deal.schoolName || "",
+          "Phường/Quận": deal.ward || "",
+          "Địa chỉ": deal.address || "",
+          "Ngày tạo": formatVietnamDateTime(deal.DATE_CREATE),
+          "Đánh dấu dữ liệu đúng (x)": info.isCorrect ? "✓" : "",
+        })
+      })
   }
 
   // Create worksheet
@@ -586,7 +618,23 @@ export const exportSummaryAndDuplicateToExcel = (
         })
       })
 
-      allDeals.forEach((deal) => {
+      // Sort deals by email (empty emails at the end)
+      const sortedDeals = [...allDeals].sort((a, b) => {
+        const emailA = a.email?.trim() || ""
+        const emailB = b.email?.trim() || ""
+
+        if (emailA && emailB) {
+          return emailA.localeCompare(emailB)
+        } else if (emailA) {
+          return -1 // emailA has value, comes before emailB (empty)
+        } else if (emailB) {
+          return 1 // emailB has value, comes after emailA (empty)
+        } else {
+          return 0 // both empty
+        }
+      })
+
+      sortedDeals.forEach((deal) => {
         const info = dealInfo[deal.ID]
         duplicateExcelData.push({
           "Nhóm trùng lặp": `${info.groupName} - ${info.groupEmail || 'Không có email'}`,
@@ -909,7 +957,23 @@ export const exportMultiSheetExcel = (
 
   // Sheet 2: Deals List (if selected and has data)
   if (hasDealsData) {
-    const dealsExcelData = dealsData.map((deal) => ({
+    // Sort deals by email (empty emails at the end)
+    const sortedDeals = [...dealsData].sort((a, b) => {
+      const emailA = a.email?.trim() || ""
+      const emailB = b.email?.trim() || ""
+
+      if (emailA && emailB) {
+        return emailA.localeCompare(emailB)
+      } else if (emailA) {
+        return -1 // emailA has value, comes before emailB (empty)
+      } else if (emailB) {
+        return 1 // emailB has value, comes after emailA (empty)
+      } else {
+        return 0 // both empty
+      }
+    })
+
+    const dealsExcelData = sortedDeals.map((deal) => ({
       "ID": deal.ID || "",
       "Tên học sinh": deal.studentName || "",
       "Tên phụ huynh": deal.parentOfStudentName || "",
@@ -938,7 +1002,7 @@ export const exportMultiSheetExcel = (
       { wch: 20 }, // Ngày tạo
     ]
     dealsWs['!cols'] = dealsColWidths
-    styleDealsSheetWithDuplicates(dealsWs, dealsData);
+    styleDealsSheetWithDuplicates(dealsWs, sortedDeals);
     XLSX.utils.book_append_sheet(wb, dealsWs, "Danh sách deals")
   }
 
@@ -1033,7 +1097,23 @@ export const exportMultiSheetExcel = (
         })
       })
 
-      allDeals.forEach((deal) => {
+      // Sort deals by email (empty emails at the end)
+      const sortedDeals = [...allDeals].sort((a, b) => {
+        const emailA = a.email?.trim() || ""
+        const emailB = b.email?.trim() || ""
+
+        if (emailA && emailB) {
+          return emailA.localeCompare(emailB)
+        } else if (emailA) {
+          return -1 // emailA has value, comes before emailB (empty)
+        } else if (emailB) {
+          return 1 // emailB has value, comes after emailA (empty)
+        } else {
+          return 0 // both empty
+        }
+      })
+
+      sortedDeals.forEach((deal) => {
         const info = dealInfo[deal.ID]
         duplicateExcelData.push({
           "Nhóm trùng lặp": `${info.groupName} - ${info.groupEmail || 'Không có email'}`,
