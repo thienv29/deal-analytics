@@ -11,6 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils"
 import { format } from "date-fns"
 import * as EmailValidator from 'email-validator';
+import * as XLSX from 'sheetjs-style'
 import { exportToCSV, exportToJSON, exportToExcel, exportDuplicateDataToExcel, exportSummaryAndDuplicateToExcel, exportMultiSheetExcel, exportMultiFormat } from "@/lib/export-utils"
 import {
   RefreshCw,
@@ -642,6 +643,510 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
     })
   }
 
+  // Custom export function for automation with custom filename
+  const exportAutomationData = async (filename: string) => {
+    const wb = XLSX.utils.book_new()
+
+    // Format date function for Vietnam timezone
+    const formatVietnamDateTime = (dateString?: string): string => {
+      if (!dateString) return ""
+      try {
+        const date = new Date(dateString)
+        return date.toLocaleString('vi-VN', {
+          timeZone: 'Asia/Ho_Chi_Minh',
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit'
+        })
+      } catch (error) {
+        return dateString
+      }
+    }
+
+    // Only export filtered deals (not all data)
+    if (filteredDeals.length > 0) {
+      const sortedDeals = [...filteredDeals].sort((a, b) => {
+        const emailA = a.email?.trim() || ""
+        const emailB = b.email?.trim() || ""
+
+        if (emailA && emailB) {
+          return emailA.localeCompare(emailB)
+        } else if (emailA) {
+          return -1
+        } else if (emailB) {
+          return 1
+        } else {
+          return 0
+        }
+      })
+
+      const dealsExcelData = sortedDeals.map((deal) => ({
+        "ID": deal.ID || "",
+        "Tên học sinh": deal.studentName || "",
+        "Tên phụ huynh": deal.parentOfStudentName || "",
+        "Khối": deal.grade || "",
+        "Lớp": deal.className || "",
+        "Email": deal.email || "",
+        "Số điện thoại": deal.phone || "",
+        "Trường học": deal.schoolName || "",
+        "Phường/Quận": deal.ward || "",
+        "Địa chỉ": deal.address || "",
+        "Ngày tạo (VN)": formatVietnamDateTime(deal.DATE_CREATE),
+        "Trường (PH tự nhập)": deal.schoolNameTmp || "",
+      }))
+
+      const dealsWs = XLSX.utils.json_to_sheet(dealsExcelData)
+      const dealsColWidths = [
+        { wch: 10 }, // ID
+        { wch: 20 }, // Tên học sinh
+        { wch: 20 }, // Tên phụ huynh
+        { wch: 10 }, // Khối
+        { wch: 15 }, // Lớp
+        { wch: 30 }, // Email
+        { wch: 15 }, // Số điện thoại
+        { wch: 25 }, // Trường học
+        { wch: 20 }, // Phường/Quận
+        { wch: 30 }, // Địa chỉ
+        { wch: 20 }, // Ngày tạo
+        { wch: 25 }, // Trường (PH tự nhập)
+      ]
+      dealsWs['!cols'] = dealsColWidths
+
+      // Apply styling
+      if (dealsWs["!ref"]) {
+        const range = XLSX.utils.decode_range(dealsWs["!ref"]);
+        const headerRow = range.s.r;
+
+        const purpleFill = {
+          patternType: "solid",
+          fgColor: { rgb: "800080" },
+        };
+        const whiteFont = { color: { rgb: "FFFFFF" }, bold: true };
+        const thinBorder = {
+          top: { style: "thin", color: { auto: 1 } },
+          bottom: { style: "thin", color: { auto: 1 } },
+          left: { style: "thin", color: { auto: 1 } },
+          right: { style: "thin", color: { auto: 1 } },
+        };
+
+        // Style header
+        for (let C = range.s.c; C <= range.e.c; ++C) {
+          const cellAddress = XLSX.utils.encode_cell({ r: headerRow, c: C });
+          const cell = dealsWs[cellAddress];
+          if (cell) {
+            cell.s = {
+              fill: purpleFill,
+              font: whiteFont,
+              border: thinBorder,
+              alignment: { horizontal: "center", vertical: "center" },
+            };
+          }
+        }
+
+        // Style all cells with borders
+        for (let R = headerRow + 1; R <= range.e.r; ++R) {
+          for (let C = range.s.c; C <= range.e.c; ++C) {
+            const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+            const cell = dealsWs[cellAddress];
+            if (cell) {
+              cell.s = { ...(cell.s || {}), border: thinBorder };
+            }
+          }
+        }
+      }
+
+      XLSX.utils.book_append_sheet(wb, dealsWs, "Deals Data")
+    }
+
+    // Export duplicates if any
+    if (duplicateData.length > 0) {
+      const duplicateExcelData: Record<string, any>[] = []
+
+      if (duplicateExportGrouped) {
+        duplicateData.forEach((group, groupIndex) => {
+          duplicateExcelData.push({
+            "Nhóm trùng lặp": `Nhóm ${groupIndex + 1}: ${group.name} - ${group.email || 'Không có email'}`,
+            "Nhóm": groupIndex + 1,
+            "Tên trùng": group.name,
+            "Email trùng": group.email || 'Không có email',
+            "Số lượng": group.count,
+            "ID": "",
+            "Tên học sinh": "",
+            "Tên phụ huynh": "",
+            "Khối": "",
+            "Lớp": "",
+            "Email": "",
+            "Số điện thoại": "",
+            "Trường học": "",
+            "Phường/Quận": "",
+            "Địa chỉ": "",
+            "Ngày tạo (VN)": "",
+            "Đánh dấu dữ liệu đúng (x)": "",
+          })
+
+          const correctIds = correctDataSelections[group.name + ":::" + (group.email || "")] || []
+
+          group.deals.forEach((deal) => {
+            duplicateExcelData.push({
+              "Nhóm trùng lặp": "",
+              "Nhóm": "",
+              "Tên trùng": "",
+              "Email trùng": "",
+              "Số lượng": "",
+              "ID": deal.ID || "",
+              "Tên học sinh": deal.studentName || "",
+              "Tên phụ huynh": deal.parentOfStudentName || "",
+              "Khối": deal.grade || "",
+              "Lớp": deal.className || "",
+              "Email": deal.email || "",
+              "Số điện thoại": deal.phone || "",
+              "Trường học": deal.schoolName || "",
+              "Phường/Quận": deal.ward || "",
+              "Địa chỉ": deal.address || "",
+              "Ngày tạo (VN)": formatVietnamDateTime(deal.DATE_CREATE),
+              "Đánh dấu dữ liệu đúng (x)": correctIds.includes(deal.ID) ? "✓" : "",
+            })
+          })
+
+          duplicateExcelData.push({
+            "Nhóm trùng lặp": "",
+            "Nhóm": "",
+            "Tên trùng": "",
+            "Email trùng": "",
+            "Số lượng": "",
+            "ID": "",
+            "Tên học sinh": "",
+            "Tên phụ huynh": "",
+            "Khối": "",
+            "Lớp": "",
+            "Email": "",
+            "Số điện thoại": "",
+            "Trường học": "",
+            "Phường/Quận": "",
+            "Địa chỉ": "",
+            "Ngày tạo (VN)": "",
+            "Đánh dấu dữ liệu đúng (x)": "",
+          })
+        })
+      } else {
+        const allDeals: Deal[] = []
+        const dealInfo: Record<string, { groupName: string; groupEmail: string; isCorrect: boolean }> = {}
+
+        duplicateData.forEach((group) => {
+          const correctIds = correctDataSelections[group.name + ":::" + (group.email || "")] || []
+
+          group.deals.forEach((deal) => {
+            allDeals.push(deal)
+            dealInfo[deal.ID] = {
+              groupName: group.name,
+              groupEmail: group.email || "",
+              isCorrect: correctIds.includes(deal.ID)
+            }
+          })
+        })
+
+        const sortedDeals = [...allDeals].sort((a, b) => {
+          const emailA = a.email?.trim() || ""
+          const emailB = b.email?.trim() || ""
+
+          if (emailA && emailB) {
+            return emailA.localeCompare(emailB)
+          } else if (emailA) {
+            return -1
+          } else if (emailB) {
+            return 1
+          } else {
+            return 0
+          }
+        })
+
+        sortedDeals.forEach((deal) => {
+          const info = dealInfo[deal.ID]
+          duplicateExcelData.push({
+            "Nhóm trùng lặp": `${info.groupName} - ${info.groupEmail || 'Không có email'}`,
+            "ID": deal.ID || "",
+            "Tên học sinh": deal.studentName || "",
+            "Tên phụ huynh": deal.parentOfStudentName || "",
+            "Khối": deal.grade || "",
+            "Lớp": deal.className || "",
+            "Email": deal.email || "",
+            "Số điện thoại": deal.phone || "",
+            "Trường học": deal.schoolName || "",
+            "Phường/Quận": deal.ward || "",
+            "Địa chỉ": deal.address || "",
+            "Ngày tạo (VN)": formatVietnamDateTime(deal.DATE_CREATE),
+            "Đánh dấu dữ liệu đúng (x)": info.isCorrect ? "✓" : "",
+          })
+        })
+      }
+
+      const duplicateWs = XLSX.utils.json_to_sheet(duplicateExcelData)
+
+      const duplicateColWidths = duplicateExportGrouped ? [
+        { wch: 25 }, // Nhóm trùng lặp
+        { wch: 8 },  // Nhóm
+        { wch: 20 }, // Tên trùng
+        { wch: 30 }, // Email trùng
+        { wch: 10 }, // Số lượng
+        { wch: 10 }, // ID
+        { wch: 20 }, // Tên học sinh
+        { wch: 20 }, // Tên phụ huynh
+        { wch: 8 },  // Khối
+        { wch: 15 }, // Lớp
+        { wch: 30 }, // Email
+        { wch: 15 }, // Số điện thoại
+        { wch: 25 }, // Trường học
+        { wch: 20 }, // Phường/Quận
+        { wch: 30 }, // Địa chỉ
+        { wch: 20 }, // Ngày tạo
+        { wch: 20 }, // Đánh dấu dữ liệu đúng
+      ] : [
+        { wch: 30 }, // Nhóm trùng lặp
+        { wch: 10 }, // ID
+        { wch: 20 }, // Tên học sinh
+        { wch: 20 }, // Tên phụ huynh
+        { wch: 8 },  // Khối
+        { wch: 15 }, // Lớp
+        { wch: 30 }, // Email
+        { wch: 15 }, // Số điện thoại
+        { wch: 25 }, // Trường học
+        { wch: 20 }, // Phường/Quận
+        { wch: 30 }, // Địa chỉ
+        { wch: 20 }, // Ngày tạo
+        { wch: 20 }, // Đánh dấu dữ liệu đúng
+      ]
+
+      duplicateWs['!cols'] = duplicateColWidths
+
+      // Apply styling
+      if (duplicateWs["!ref"]) {
+        const range = XLSX.utils.decode_range(duplicateWs["!ref"]);
+        const headerRow = range.s.r;
+
+        const purpleFill = {
+          patternType: "solid",
+          fgColor: { rgb: "800080" },
+        };
+        const whiteFont = { color: { rgb: "FFFFFF" }, bold: true };
+        const thinBorder = {
+          top: { style: "thin", color: { auto: 1 } },
+          bottom: { style: "thin", color: { auto: 1 } },
+          left: { style: "thin", color: { auto: 1 } },
+          right: { style: "thin", color: { auto: 1 } },
+        };
+
+        for (let R = headerRow; R <= range.e.r; ++R) {
+          for (let C = range.s.c; C <= range.e.c; ++C) {
+            const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+            const cell = duplicateWs[cellAddress];
+            if (cell) {
+              if (R === headerRow) {
+                cell.s = {
+                  fill: purpleFill,
+                  font: whiteFont,
+                  border: thinBorder,
+                  alignment: { horizontal: "center", vertical: "center" },
+                };
+              } else {
+                cell.s = { ...(cell.s || {}), border: thinBorder };
+              }
+            }
+          }
+        }
+      }
+
+      XLSX.utils.book_append_sheet(wb, duplicateWs, duplicateExportGrouped ? "Dữ liệu trùng lặp" : "Dữ liệu trùng lặp (Flat)")
+    }
+
+    // Save with custom filename
+    XLSX.writeFile(wb, filename + ".xlsx")
+  }
+
+  // Automation function to iterate through all schoolWardPairFilter and export
+  const automateSchoolWardPairExports = async () => {
+    const allPairs = filterOptions.schoolWardPairs
+
+    if (allPairs.length === 0) {
+      alert("Không có cặp Trường - Phường nào để export")
+      return
+    }
+
+    // Ask user how many pairs to process
+    const numToProcess = prompt(`Có ${allPairs.length} cặp Trường - Phường. Nhập số lượng cặp muốn xử lý (hoặc để trống để xử lý tất cả):`) ||
+      allPairs.length
+
+    const limit = parseInt(numToProcess.toString()) || allPairs.length
+    const pairsToProcess = allPairs.slice(0, limit)
+
+    console.log(`🚀 Bắt đầu automation export cho ${pairsToProcess.length} cặp Trường - Phường...`)
+
+    for (let i = 0; i < pairsToProcess.length; i++) {
+      const pair = pairsToProcess[i]
+      const [school, ward] = pair.split(" - ")
+
+      console.log(`📋 Đang xử lý cặp ${i + 1}/${pairsToProcess.length}: ${pair}`)
+
+      // Reset filter first to ensure clean state
+      setSchoolWardPairFilter("all")
+      await new Promise(resolve => setTimeout(resolve, 200))
+
+      // Set the specific pair filter
+      setSchoolWardPairFilter(pair)
+      await new Promise(resolve => setTimeout(resolve, 800))
+
+      // Manually filter the deals for this specific pair to ensure we get the right data
+      const filteredForPair = deals.filter((deal) => deal.schoolName === school && deal.ward === ward)
+
+      console.log(`🔍 Dữ liệu sau khi lọc thủ công: ${filteredForPair.length} deals`)
+
+      if (filteredForPair.length === 0) {
+        console.warn(`⚠️ Không có dữ liệu cho cặp ${pair}, bỏ qua`)
+        continue
+      }
+
+      // Generate filename with school and ward
+      const sanitizedSchool = school.replace(/[^a-zA-Z0-9\u00C0-\u024F\u1E00-\u1EFF]/g, '_')
+        .replace(/_{2,}/g, '_').toLowerCase()
+      const sanitizedWard = ward.replace(/[^a-zA-Z0-9\u00C0-\u024F\u1E00-\u1EFF]/g, '_')
+        .replace(/_{2,}/g, '_').toLowerCase()
+
+      const exportDate = new Date().toISOString().split('T')[0]
+      const customFilename = `${sanitizedSchool}_${sanitizedWard}_${filteredForPair.length}deal_${exportDate}`
+
+      try {
+        // Export data directly using the manually filtered data
+        await exportAutomationDataDirect(filteredForPair, () => duplicateData, customFilename)
+
+        console.log(`✅ Thành công: ${customFilename}.xlsx (${filteredForPair.length} deals)`)
+      } catch (error) {
+        console.error(`❌ Lỗi export ${pair}:`, error)
+      }
+
+      // Delay between exports to avoid browser overload
+      if (i < pairsToProcess.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 1200))
+      }
+    }
+
+    // Reset filter to all
+    setSchoolWardPairFilter("all")
+
+    console.log(`🎉 Hoàn thành automation! Đã export ${pairsToProcess.length} files`)
+    alert(`✅ Hoàn thành! Đã export ${pairsToProcess.length} file Excel.\n\nMỗi file chứa dữ liệu của 1 cặp Trường-Phường.\nKiểm tra thư mục Downloads!`)
+  }
+
+  // Direct export function that takes data as parameter
+  const exportAutomationDataDirect = async (dealsData: Deal[], getDuplicateData: () => any[], filename: string) => {
+    const wb = XLSX.utils.book_new()
+
+    // Format date function for Vietnam timezone
+    const formatVietnamDateTime = (dateString?: string): string => {
+      if (!dateString) return ""
+      try {
+        const date = new Date(dateString)
+        return date.toLocaleString('vi-VN', {
+          timeZone: 'Asia/Ho_Chi_Minh',
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit'
+        })
+      } catch (error) {
+        return dateString
+      }
+    }
+
+    // Export deals data
+    if (dealsData.length > 0) {
+      const dealsExcelData = dealsData.map((deal, index) => ({
+        "STT": index + 1,
+        "ID": deal.ID || "",
+        "Tên học sinh": deal.studentName || "",
+        "Tên phụ huynh": deal.parentOfStudentName || "",
+        "Khối": deal.grade || "",
+        "Lớp": deal.className || "",
+        "Email": deal.email || "",
+        "Số điện thoại": deal.phone || "",
+        "Trường học": deal.schoolName || "",
+        "Phường/Quận": deal.ward || "",
+        "Địa chỉ": deal.address || "",
+        "Ngày tạo (VN)": formatVietnamDateTime(deal.DATE_CREATE),
+        "Trường (PH tự nhập)": deal.schoolNameTmp || "",
+      }))
+
+      const dealsWs = XLSX.utils.json_to_sheet(dealsExcelData)
+      const dealsColWidths = [
+        { wch: 6 },  // STT
+        { wch: 10 }, // ID
+        { wch: 20 }, // Tên học sinh
+        { wch: 20 }, // Tên phụ huynh
+        { wch: 10 }, // Khối
+        { wch: 15 }, // Lớp
+        { wch: 30 }, // Email
+        { wch: 15 }, // Số điện thoại
+        { wch: 25 }, // Trường học
+        { wch: 20 }, // Phường/Quận
+        { wch: 30 }, // Địa chỉ
+        { wch: 20 }, // Ngày tạo
+        { wch: 25 }, // Trường (PH tự nhập)
+      ]
+      dealsWs['!cols'] = dealsColWidths
+
+      // Apply styling
+      if (dealsWs["!ref"]) {
+        const range = XLSX.utils.decode_range(dealsWs["!ref"]);
+        const headerRow = range.s.r;
+
+        const purpleFill = {
+          patternType: "solid",
+          fgColor: { rgb: "800080" },
+        };
+        const whiteFont = { color: { rgb: "FFFFFF" }, bold: true };
+        const thinBorder = {
+          top: { style: "thin", color: { auto: 1 } },
+          bottom: { style: "thin", color: { auto: 1 } },
+          left: { style: "thin", color: { auto: 1 } },
+          right: { style: "thin", color: { auto: 1 } },
+        };
+
+        // Style header
+        for (let C = range.s.c; C <= range.e.c; ++C) {
+          const cellAddress = XLSX.utils.encode_cell({ r: headerRow, c: C });
+          const cell = dealsWs[cellAddress];
+          if (cell) {
+            cell.s = {
+              fill: purpleFill,
+              font: whiteFont,
+              border: thinBorder,
+              alignment: { horizontal: "center", vertical: "center" },
+            };
+          }
+        }
+
+        // Style all cells with borders
+        for (let R = headerRow + 1; R <= range.e.r; ++R) {
+          for (let C = range.s.c; C <= range.e.c; ++C) {
+            const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+            const cell = dealsWs[cellAddress];
+            if (cell) {
+              cell.s = { ...(cell.s || {}), border: thinBorder };
+            }
+          }
+        }
+      }
+
+      XLSX.utils.book_append_sheet(wb, dealsWs, "Danh sách deals")
+    }
+
+    // Save with custom filename
+    XLSX.writeFile(wb, filename + ".xlsx")
+  }
+
   return (
     <div className="space-y-6">
       {loading && (
@@ -677,6 +1182,17 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
             {loading ? "Đang tải..." : "Fetch từ CRM"}
           </Button>
+
+          {filterOptions.schoolWardPairs.length > 0 && (
+            <Button
+              onClick={automateSchoolWardPairExports}
+              disabled={loading}
+              className="gap-2 bg-purple-600 hover:bg-purple-700 text-white"
+            >
+              <Download className="h-4 w-4" />
+              Auto Xuất Theo Cặp Trường-Phường ({filterOptions.schoolWardPairs.length})
+            </Button>
+          )}
 
           {filteredDeals.length > 0 && (
             <div className="flex items-center gap-2">
