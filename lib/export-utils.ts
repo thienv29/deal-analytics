@@ -66,6 +66,25 @@ export const exportToJSON = (filteredDeals: Deal[]) => {
 export const exportToExcel = (filteredDeals: Deal[]) => {
   if (filteredDeals.length === 0) return
 
+  // Format date function for Vietnam timezone
+  const formatVietnamDateTime = (dateString?: string): string => {
+    if (!dateString) return ""
+    try {
+      const date = new Date(dateString)
+      return date.toLocaleString('vi-VN', {
+        timeZone: 'Asia/Ho_Chi_Minh',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      })
+    } catch (error) {
+      return dateString
+    }
+  }
+
   // Prepare data for Excel export
   const excelData = filteredDeals.map((deal) => ({
     "ID": deal.ID || "",
@@ -78,7 +97,7 @@ export const exportToExcel = (filteredDeals: Deal[]) => {
     "Trường học": deal.schoolName || "",
     "Phường/Quận": deal.ward || "",
     "Địa chỉ": deal.address || "",
-    "Ngày tạo": deal.DATE_CREATE || "",
+    "Ngày tạo": formatVietnamDateTime(deal.DATE_CREATE),
   })) as Record<string, string>[]
 
   // Create worksheet
@@ -115,6 +134,25 @@ export const exportDuplicateDataToExcel = (
   exportGrouped: boolean = true
 ) => {
   if (duplicateData.length === 0) return
+
+  // Format date function for Vietnam timezone
+  const formatVietnamDateTime = (dateString?: string): string => {
+    if (!dateString) return ""
+    try {
+      const date = new Date(dateString)
+      return date.toLocaleString('vi-VN', {
+        timeZone: 'Asia/Ho_Chi_Minh',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      })
+    } catch (error) {
+      return dateString
+    }
+  }
 
   // Prepare data for Excel export
   const excelData: Record<string, any>[] = []
@@ -163,7 +201,7 @@ export const exportDuplicateDataToExcel = (
           "Trường học": deal.schoolName || "",
           "Phường/Quận": deal.ward || "",
           "Địa chỉ": deal.address || "",
-          "Ngày tạo": deal.DATE_CREATE || "",
+          "Ngày tạo": formatVietnamDateTime(deal.DATE_CREATE),
           "Đánh dấu dữ liệu đúng (x)": correctIds.includes(deal.ID) ? "✓" : "",
         })
       })
@@ -221,7 +259,7 @@ export const exportDuplicateDataToExcel = (
         "Trường học": deal.schoolName || "",
         "Phường/Quận": deal.ward || "",
         "Địa chỉ": deal.address || "",
-        "Ngày tạo": deal.DATE_CREATE || "",
+        "Ngày tạo": formatVietnamDateTime(deal.DATE_CREATE),
         "Đánh dấu dữ liệu đúng (x)": info.isCorrect ? "✓" : "",
       })
     })
@@ -283,6 +321,25 @@ export const exportSummaryAndDuplicateToExcel = (
   exportDuplicateGrouped: boolean = true
 ) => {
   if (summaryData.length === 0 && duplicateData.length === 0) return
+
+  // Format date function for Vietnam timezone
+  const formatVietnamDateTime = (dateString?: string): string => {
+    if (!dateString) return ""
+    try {
+      const date = new Date(dateString)
+      return date.toLocaleString('vi-VN', {
+        timeZone: 'Asia/Ho_Chi_Minh',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      })
+    } catch (error) {
+      return dateString
+    }
+  }
 
   const wb = XLSX.utils.book_new()
 
@@ -360,7 +417,7 @@ export const exportSummaryAndDuplicateToExcel = (
             "Trường học": deal.schoolName || "",
             "Phường/Quận": deal.ward || "",
             "Địa chỉ": deal.address || "",
-            "Ngày tạo": deal.DATE_CREATE || "",
+            "Ngày tạo": formatVietnamDateTime(deal.DATE_CREATE),
             "Đánh dấu dữ liệu đúng (x)": correctIds.includes(deal.ID) ? "✓" : "",
           })
         })
@@ -418,7 +475,7 @@ export const exportSummaryAndDuplicateToExcel = (
           "Trường học": deal.schoolName || "",
           "Phường/Quận": deal.ward || "",
           "Địa chỉ": deal.address || "",
-          "Ngày tạo": deal.DATE_CREATE || "",
+          "Ngày tạo": formatVietnamDateTime(deal.DATE_CREATE),
           "Đánh dấu dữ liệu đúng (x)": info.isCorrect ? "✓" : "",
         })
       })
@@ -705,6 +762,25 @@ export const exportMultiSheetExcel = (
     XLSX.utils.book_append_sheet(wb, summaryWs, "Bảng tổng hợp")
   }
 
+  // Format date function for Vietnam timezone
+  const formatVietnamDateTime = (dateString?: string): string => {
+    if (!dateString) return ""
+    try {
+      const date = new Date(dateString)
+      return date.toLocaleString('vi-VN', {
+        timeZone: 'Asia/Ho_Chi_Minh',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      })
+    } catch (error) {
+      return dateString
+    }
+  }
+
   // Sheet 2: Deals List (if selected and has data)
   if (hasDealsData) {
     const dealsExcelData = dealsData.map((deal) => ({
@@ -718,7 +794,7 @@ export const exportMultiSheetExcel = (
       "Trường học": deal.schoolName || "",
       "Phường/Quận": deal.ward || "",
       "Địa chỉ": deal.address || "",
-      "Ngày tạo": deal.DATE_CREATE || "",
+      "Ngày tạo": formatVietnamDateTime(deal.DATE_CREATE),
     }))
 
     const dealsWs = XLSX.utils.json_to_sheet(dealsExcelData)
@@ -786,7 +862,7 @@ export const exportMultiSheetExcel = (
             "Trường học": deal.schoolName || "",
             "Phường/Quận": deal.ward || "",
             "Địa chỉ": deal.address || "",
-            "Ngày tạo": deal.DATE_CREATE || "",
+            "Ngày tạo": formatVietnamDateTime(deal.DATE_CREATE),
             "Đánh dấu dữ liệu đúng (x)": correctIds.includes(deal.ID) ? "✓" : "",
           })
         })
@@ -844,7 +920,7 @@ export const exportMultiSheetExcel = (
           "Trường học": deal.schoolName || "",
           "Phường/Quận": deal.ward || "",
           "Địa chỉ": deal.address || "",
-          "Ngày tạo": deal.DATE_CREATE || "",
+          "Ngày tạo": formatVietnamDateTime(deal.DATE_CREATE),
           "Đánh dấu dữ liệu đúng (x)": info.isCorrect ? "✓" : "",
         })
       })
