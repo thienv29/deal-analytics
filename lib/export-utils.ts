@@ -218,6 +218,7 @@ export const exportToExcel = (filteredDeals: Deal[]) => {
     "Phường/Quận": deal.ward || "",
     "Địa chỉ": deal.address || "",
     "Ngày tạo": formatVietnamDateTime(deal.DATE_CREATE),
+    "Trường (PH tự nhập)": deal.schoolNameTmp || "",
   })) as Record<string, string>[]
 
   // Create worksheet
@@ -236,6 +237,7 @@ export const exportToExcel = (filteredDeals: Deal[]) => {
     { wch: 20 }, // Phường/Quận
     { wch: 30 }, // Địa chỉ
     { wch: 20 }, // Ngày tạo
+    { wch: 30 }, // Ngày tạo
   ]
   ws['!cols'] = colWidths
 
@@ -323,7 +325,7 @@ export const exportDuplicateDataToExcel = (
           "Phường/Quận": deal.ward || "",
           "Địa chỉ": deal.address || "",
           "Ngày tạo": formatVietnamDateTime(deal.DATE_CREATE),
-          "Đánh dấu dữ liệu đúng (x)": correctIds.includes(deal.ID) ? "✓" : "",
+          "Đánh dấu dữ liệu đúng (x)": correctIds.includes(deal.ID) ? "x" : "",
         })
       })
 

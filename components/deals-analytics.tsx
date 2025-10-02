@@ -96,7 +96,7 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc")
 
   const [tableSortField, setTableSortField] = useState<
-    "ID" | "studentName" | "parentOfStudentName" | "grade" | "className" | "email" | "phone" | "schoolName" | "ward"
+    "ID" | "studentName" | "parentOfStudentName" | "grade" | "className" | "email" | "phone" | "schoolName" | "ward"| "schoolNameTmp"
   >("ID")
   const [tableSortDirection, setTableSortDirection] = useState<"asc" | "desc">("asc")
 
@@ -1359,6 +1359,7 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
                         {renderTableSortableHeader("phone", "Phone")}
                         {renderTableSortableHeader("schoolName", "Trường")}
                         {renderTableSortableHeader("ward", "Phường/Quận")}
+                        {renderTableSortableHeader("schoolNameTmp", "Trường (PH tự nhập)")}
                       </tr>
                     </thead>
                     <tbody>
@@ -1373,6 +1374,7 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
                           <td className="p-2 text-sm">{deal.phone || "-"}</td>
                           <td className="p-2 text-sm">{deal.schoolName || "-"}</td>
                           <td className="p-2 text-sm">{deal.ward || "-"}</td>
+                          <td className="p-2 text-sm">{deal.schoolNameTmp || "-"}</td>
                         </tr>
                       ))}
                     </tbody>
