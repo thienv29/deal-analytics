@@ -2054,7 +2054,6 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
                               <table className="w-full border-collapse">
                                 <thead>
                                   <tr className="border-b bg-muted/30">
-                                    <th className="text-center p-2 font-medium text-sm">Đánh dấu dữ liệu đúng (x)</th>
                                     <th className="text-left p-2 font-medium text-sm">ID</th>
                                     <th className="text-left p-2 font-medium text-sm">Học sinh</th>
                                     <th className="text-left p-2 font-medium text-sm">Tên phụ huynh</th>
@@ -2071,14 +2070,6 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
                                 <tbody>
                                   {group.deals.map((deal, index) => (
                                     <tr key={deal.ID} className={`border-b hover:bg-muted/20 ${selectedIds.includes(deal.ID) ? 'bg-blue-50' : ''}`}>
-                                      <td className="p-2 text-center">
-                                        <input
-                                          type="checkbox"
-                                          checked={selectedIds.includes(deal.ID)}
-                                          onChange={() => toggleCorrectDataSelection(groupKey, deal.ID)}
-                                          className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
-                                        />
-                                      </td>
                                       <td className="p-2 text-sm">{deal.ID}</td>
                                       <td className="p-2 text-sm">{deal.studentName || "-"}</td>
                                       <td className="p-2 text-sm">{deal.parentOfStudentName || "-"}</td>
