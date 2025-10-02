@@ -11,7 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils"
 import { format } from "date-fns"
 import * as EmailValidator from 'email-validator';
-import { exportToCSV, exportToJSON, exportToExcel, exportDuplicateDataToExcel } from "@/lib/export-utils"
+import { exportToCSV, exportToJSON, exportToExcel, exportDuplicateDataToExcel, exportSummaryAndDuplicateToExcel } from "@/lib/export-utils"
 import {
   RefreshCw,
   X,
@@ -618,6 +618,12 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
     exportDuplicateDataToExcel(duplicateData, correctDataSelections, duplicateExportGrouped)
   }
 
+  const handleExportSummaryAndDuplicate = () => {
+    if (chartData?.schoolWardDuplicateData) {
+      exportSummaryAndDuplicateToExcel(chartData.schoolWardDuplicateData, duplicateData, correctDataSelections, duplicateExportGrouped)
+    }
+  }
+
   return (
     <div className="space-y-6">
       {loading && (
@@ -1140,10 +1146,21 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
                 {/* School-ward deals summary table */}
                 <Card>
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <MapPin className="h-5 w-5" />
-                      Bảng tổng hợp Trường - Phường
-                    </CardTitle>
+                    <div className="flex justify-between items-center">
+                      <CardTitle className="flex items-center gap-2">
+                        <MapPin className="h-5 w-5" />
+                        Bảng tổng hợp Trường - Phường
+                      </CardTitle>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleExportSummaryAndDuplicate}
+                        className="gap-2 bg-transparent"
+                      >
+                        <Download className="h-3 w-3" />
+                        Xuất bảng tổng hợp + trùng lặp
+                      </Button>
+                    </div>
                   </CardHeader>
                   <CardContent>
                     <div className="overflow-x-auto">
@@ -1400,7 +1417,7 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
                             <table className="w-full border-collapse">
                               <thead>
                                 <tr className="border-b bg-muted/30">
-                                  <th className="text-center p-2 font-medium text-sm">Đánh dấu dữ liệu đúng (x) (x)</th>
+                                  <th className="text-center p-2 font-medium text-sm">Đánh dấu dữ liệu đúng (x)</th>
                                   <th className="text-left p-2 font-medium text-sm">ID</th>
                                   <th className="text-left p-2 font-medium text-sm">Học sinh</th>
                                   <th className="text-left p-2 font-medium text-sm">Tên phụ huynh</th>
