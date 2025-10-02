@@ -294,27 +294,6 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
     }
   }
 
-  const loadSampleData = async () => {
-    setLoading(true)
-    try {
-      const response = await fetch("/api/deals", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "sample" }),
-      })
-      const result = await response.json()
-
-      if (result.success) {
-        setDeals(result.data)
-        onDataLoad?.(result.data)
-      }
-    } catch (error) {
-      console.error("Error loading sample data:", error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
   const clearFilters = () => {
     setSearchQuery("")
     setGradeFilter("")
@@ -674,9 +653,7 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
             {loading ? "Đang tải..." : "Fetch từ CRM"}
           </Button>
-          <Button variant="outline" onClick={loadSampleData} disabled={loading}>
-            Load Sample
-          </Button>
+
           {filteredDeals.length > 0 && (
             <>
               <Button variant="outline" onClick={() => exportToCSV(filteredDeals)} className="gap-2 bg-transparent">
