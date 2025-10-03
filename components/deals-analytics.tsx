@@ -2049,14 +2049,14 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
                                     ({group.count} bản ghi)
                                   </span>
                                 </div>
-                                {group.deals.length == 2 && (group.deals[0].phone == group.deals[1].phone 
-                                  && group.deals[0].studentName == group.deals[1].studentName
-                                  && group.deals[0].parentOfStudentName == group.deals[1].parentOfStudentName
-                                  && group.deals[0].schoolName == group.deals[1].schoolName
-                                  && group.deals[0].ward == group.deals[1].ward
-                                  && group.deals[0].className == group.deals[1].className
-                                  && group.deals[0].grade == group.deals[1].grade
-                                  && group.deals[0].schoolNameTmp == group.deals[1].schoolNameTmp) && (<Button
+                                {group.deals.length == 2 && (group.deals[0].phone?.trim() == group.deals[1].phone?.trim() 
+                                  && group.deals[0].studentName?.trim() == group.deals[1].studentName?.trim()
+                                  && group.deals[0].parentOfStudentName?.trim() == group.deals[1].parentOfStudentName?.trim()
+                                  && group.deals[0].schoolName?.trim() == group.deals[1].schoolName?.trim()
+                                  && group.deals[0].ward?.trim() == group.deals[1].ward?.trim()
+                                  && group.deals[0].className?.trim() == group.deals[1].className?.trim()
+                                  && group.deals[0].grade?.trim() == group.deals[1].grade?.trim()
+                                  && group.deals[0].schoolNameTmp?.trim() == group.deals[1].schoolNameTmp?.trim()) && (<Button
                                           variant="outline"
                                           size="sm"
                                           onClick={() => deleteDuplicateDeal(group.deals[0].ID)}
