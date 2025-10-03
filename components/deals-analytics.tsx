@@ -193,11 +193,11 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
 
     if (schoolValidityFilter === 'valid') {
       filtered = filtered.filter((deal) => {
-        return !!deal.schoolName
+        return !!deal.schoolName && !!deal.ward
       })
     } else if (schoolValidityFilter === 'invalid_empty') {
       filtered = filtered.filter((deal) => {
-        return !deal.schoolName
+        return !deal.schoolName || !deal.ward
       })
     }
 
@@ -640,341 +640,6 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
     }
   }
 
-  const handleMultiSheetExport = () => {
-    exportMultiSheetExcel({
-      includeSummary: exportIncludeSummary,
-      includeDeals: exportIncludeDeals,
-      includeDuplicates: exportIncludeDuplicates,
-      summaryData: chartData?.schoolWardDuplicateData || [],
-      dealsData: filteredDeals,
-      duplicateData,
-      correctDataSelections,
-      duplicateExportGrouped,
-    })
-  }
-
-  // Custom export function for automation with custom filename
-  const exportAutomationData = async (filename: string) => {
-    const wb = XLSX.utils.book_new()
-
-    // Format date function for Vietnam timezone
-    const formatVietnamDateTime = (dateString?: string): string => {
-      if (!dateString) return ""
-      try {
-        const date = new Date(dateString)
-        return date.toLocaleString('vi-VN', {
-          timeZone: 'Asia/Ho_Chi_Minh',
-          year: 'numeric',
-          month: '2-digit',
-          day: '2-digit',
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit'
-        })
-      } catch (error) {
-        return dateString
-      }
-    }
-
-    // Only export filtered deals (not all data)
-    if (filteredDeals.length > 0) {
-      const sortedDeals = [...filteredDeals].sort((a, b) => {
-        const emailA = a.email?.trim() || ""
-        const emailB = b.email?.trim() || ""
-
-        if (emailA && emailB) {
-          return emailA.localeCompare(emailB)
-        } else if (emailA) {
-          return -1
-        } else if (emailB) {
-          return 1
-        } else {
-          return 0
-        }
-      })
-
-      const dealsExcelData = sortedDeals.map((deal) => ({
-        "ID": deal.ID || "",
-        "Tên học sinh": deal.studentName || "",
-        "Tên phụ huynh": deal.parentOfStudentName || "",
-        "Khối": deal.grade || "",
-        "Lớp": deal.className || "",
-        "Email": deal.email || "",
-        "Số điện thoại": deal.phone || "",
-        "Trường học": deal.schoolName || "",
-        "Phường/Quận": deal.ward || "",
-        "Địa chỉ": deal.address || "",
-        "Ngày tạo (VN)": formatVietnamDateTime(deal.DATE_CREATE),
-        "Trường (PH tự nhập)": deal.schoolNameTmp || "",
-      }))
-
-      const dealsWs = XLSX.utils.json_to_sheet(dealsExcelData)
-      const dealsColWidths = [
-        { wch: 10 }, // ID
-        { wch: 20 }, // Tên học sinh
-        { wch: 20 }, // Tên phụ huynh
-        { wch: 10 }, // Khối
-        { wch: 15 }, // Lớp
-        { wch: 30 }, // Email
-        { wch: 15 }, // Số điện thoại
-        { wch: 25 }, // Trường học
-        { wch: 20 }, // Phường/Quận
-        { wch: 30 }, // Địa chỉ
-        { wch: 20 }, // Ngày tạo
-        { wch: 25 }, // Trường (PH tự nhập)
-      ]
-      dealsWs['!cols'] = dealsColWidths
-
-      // Apply styling
-      if (dealsWs["!ref"]) {
-        const range = XLSX.utils.decode_range(dealsWs["!ref"]);
-        const headerRow = range.s.r;
-
-        const purpleFill = {
-          patternType: "solid",
-          fgColor: { rgb: "800080" },
-        };
-        const whiteFont = { color: { rgb: "FFFFFF" }, bold: true };
-        const thinBorder = {
-          top: { style: "thin", color: { auto: 1 } },
-          bottom: { style: "thin", color: { auto: 1 } },
-          left: { style: "thin", color: { auto: 1 } },
-          right: { style: "thin", color: { auto: 1 } },
-        };
-
-        // Style header
-        for (let C = range.s.c; C <= range.e.c; ++C) {
-          const cellAddress = XLSX.utils.encode_cell({ r: headerRow, c: C });
-          const cell = dealsWs[cellAddress];
-          if (cell) {
-            cell.s = {
-              fill: purpleFill,
-              font: whiteFont,
-              border: thinBorder,
-              alignment: { horizontal: "center", vertical: "center" },
-            };
-          }
-        }
-
-        // Style all cells with borders
-        for (let R = headerRow + 1; R <= range.e.r; ++R) {
-          for (let C = range.s.c; C <= range.e.c; ++C) {
-            const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
-            const cell = dealsWs[cellAddress];
-            if (cell) {
-              cell.s = { ...(cell.s || {}), border: thinBorder };
-            }
-          }
-        }
-      }
-
-      XLSX.utils.book_append_sheet(wb, dealsWs, "Deals Data")
-    }
-
-    // Export duplicates if any
-    if (duplicateData.length > 0) {
-      const duplicateExcelData: Record<string, any>[] = []
-
-      if (duplicateExportGrouped) {
-        duplicateData.forEach((group, groupIndex) => {
-          duplicateExcelData.push({
-            "Nhóm trùng lặp": `Nhóm ${groupIndex + 1}: ${group.name} - ${group.email || 'Không có email'}`,
-            "Nhóm": groupIndex + 1,
-            "Tên trùng": group.name,
-            "Email trùng": group.email || 'Không có email',
-            "Số lượng": group.count,
-            "ID": "",
-            "Tên học sinh": "",
-            "Tên phụ huynh": "",
-            "Khối": "",
-            "Lớp": "",
-            "Email": "",
-            "Số điện thoại": "",
-            "Trường học": "",
-            "Phường/Quận": "",
-            "Địa chỉ": "",
-            "Ngày tạo (VN)": "",
-            "Đánh dấu dữ liệu đúng (x)": "",
-          })
-
-          const correctIds = correctDataSelections[group.name + ":::" + (group.email || "")] || []
-
-          group.deals.forEach((deal) => {
-            duplicateExcelData.push({
-              "Nhóm trùng lặp": "",
-              "Nhóm": "",
-              "Tên trùng": "",
-              "Email trùng": "",
-              "Số lượng": "",
-              "ID": deal.ID || "",
-              "Tên học sinh": deal.studentName || "",
-              "Tên phụ huynh": deal.parentOfStudentName || "",
-              "Khối": deal.grade || "",
-              "Lớp": deal.className || "",
-              "Email": deal.email || "",
-              "Số điện thoại": deal.phone || "",
-              "Trường học": deal.schoolName || "",
-              "Phường/Quận": deal.ward || "",
-              "Địa chỉ": deal.address || "",
-              "Ngày tạo (VN)": formatVietnamDateTime(deal.DATE_CREATE),
-              "Đánh dấu dữ liệu đúng (x)": correctIds.includes(deal.ID) ? "✓" : "",
-            })
-          })
-
-          duplicateExcelData.push({
-            "Nhóm trùng lặp": "",
-            "Nhóm": "",
-            "Tên trùng": "",
-            "Email trùng": "",
-            "Số lượng": "",
-            "ID": "",
-            "Tên học sinh": "",
-            "Tên phụ huynh": "",
-            "Khối": "",
-            "Lớp": "",
-            "Email": "",
-            "Số điện thoại": "",
-            "Trường học": "",
-            "Phường/Quận": "",
-            "Địa chỉ": "",
-            "Ngày tạo (VN)": "",
-            "Đánh dấu dữ liệu đúng (x)": "",
-          })
-        })
-      } else {
-        const allDeals: Deal[] = []
-        const dealInfo: Record<string, { groupName: string; groupEmail: string; isCorrect: boolean }> = {}
-
-        duplicateData.forEach((group) => {
-          const correctIds = correctDataSelections[group.name + ":::" + (group.email || "")] || []
-
-          group.deals.forEach((deal) => {
-            allDeals.push(deal)
-            dealInfo[deal.ID] = {
-              groupName: group.name,
-              groupEmail: group.email || "",
-              isCorrect: correctIds.includes(deal.ID)
-            }
-          })
-        })
-
-        const sortedDeals = [...allDeals].sort((a, b) => {
-          const emailA = a.email?.trim() || ""
-          const emailB = b.email?.trim() || ""
-
-          if (emailA && emailB) {
-            return emailA.localeCompare(emailB)
-          } else if (emailA) {
-            return -1
-          } else if (emailB) {
-            return 1
-          } else {
-            return 0
-          }
-        })
-
-        sortedDeals.forEach((deal) => {
-          const info = dealInfo[deal.ID]
-          duplicateExcelData.push({
-            "Nhóm trùng lặp": `${info.groupName} - ${info.groupEmail || 'Không có email'}`,
-            "ID": deal.ID || "",
-            "Tên học sinh": deal.studentName || "",
-            "Tên phụ huynh": deal.parentOfStudentName || "",
-            "Khối": deal.grade || "",
-            "Lớp": deal.className || "",
-            "Email": deal.email || "",
-            "Số điện thoại": deal.phone || "",
-            "Trường học": deal.schoolName || "",
-            "Phường/Quận": deal.ward || "",
-            "Địa chỉ": deal.address || "",
-            "Ngày tạo (VN)": formatVietnamDateTime(deal.DATE_CREATE),
-            "Đánh dấu dữ liệu đúng (x)": info.isCorrect ? "✓" : "",
-          })
-        })
-      }
-
-      const duplicateWs = XLSX.utils.json_to_sheet(duplicateExcelData)
-
-      const duplicateColWidths = duplicateExportGrouped ? [
-        { wch: 25 }, // Nhóm trùng lặp
-        { wch: 8 },  // Nhóm
-        { wch: 20 }, // Tên trùng
-        { wch: 30 }, // Email trùng
-        { wch: 10 }, // Số lượng
-        { wch: 10 }, // ID
-        { wch: 20 }, // Tên học sinh
-        { wch: 20 }, // Tên phụ huynh
-        { wch: 8 },  // Khối
-        { wch: 15 }, // Lớp
-        { wch: 30 }, // Email
-        { wch: 15 }, // Số điện thoại
-        { wch: 25 }, // Trường học
-        { wch: 20 }, // Phường/Quận
-        { wch: 30 }, // Địa chỉ
-        { wch: 20 }, // Ngày tạo
-        { wch: 20 }, // Đánh dấu dữ liệu đúng
-      ] : [
-        { wch: 30 }, // Nhóm trùng lặp
-        { wch: 10 }, // ID
-        { wch: 20 }, // Tên học sinh
-        { wch: 20 }, // Tên phụ huynh
-        { wch: 8 },  // Khối
-        { wch: 15 }, // Lớp
-        { wch: 30 }, // Email
-        { wch: 15 }, // Số điện thoại
-        { wch: 25 }, // Trường học
-        { wch: 20 }, // Phường/Quận
-        { wch: 30 }, // Địa chỉ
-        { wch: 20 }, // Ngày tạo
-        { wch: 20 }, // Đánh dấu dữ liệu đúng
-      ]
-
-      duplicateWs['!cols'] = duplicateColWidths
-
-      // Apply styling
-      if (duplicateWs["!ref"]) {
-        const range = XLSX.utils.decode_range(duplicateWs["!ref"]);
-        const headerRow = range.s.r;
-
-        const purpleFill = {
-          patternType: "solid",
-          fgColor: { rgb: "800080" },
-        };
-        const whiteFont = { color: { rgb: "FFFFFF" }, bold: true };
-        const thinBorder = {
-          top: { style: "thin", color: { auto: 1 } },
-          bottom: { style: "thin", color: { auto: 1 } },
-          left: { style: "thin", color: { auto: 1 } },
-          right: { style: "thin", color: { auto: 1 } },
-        };
-
-        for (let R = headerRow; R <= range.e.r; ++R) {
-          for (let C = range.s.c; C <= range.e.c; ++C) {
-            const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
-            const cell = duplicateWs[cellAddress];
-            if (cell) {
-              if (R === headerRow) {
-                cell.s = {
-                  fill: purpleFill,
-                  font: whiteFont,
-                  border: thinBorder,
-                  alignment: { horizontal: "center", vertical: "center" },
-                };
-              } else {
-                cell.s = { ...(cell.s || {}), border: thinBorder };
-              }
-            }
-          }
-        }
-      }
-
-      XLSX.utils.book_append_sheet(wb, duplicateWs, duplicateExportGrouped ? "Dữ liệu trùng lặp" : "Dữ liệu trùng lặp (Flat)")
-    }
-
-    // Save with custom filename
-    XLSX.writeFile(wb, filename + ".xlsx")
-  }
-
   // Automation function to iterate through all schoolWardPairFilter and export
   const automateSchoolWardPairExports = async () => {
     const allPairs = filterOptions.schoolWardPairs
@@ -1008,7 +673,37 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
       await new Promise(resolve => setTimeout(resolve, 800))
 
       // Manually filter the deals for this specific pair to ensure we get the right data
-      const filteredForPair = deals.filter((deal) => deal.schoolName === school && deal.ward === ward)
+      let filteredForPair = deals.filter((deal) => deal.schoolName === school && deal.ward === ward)
+
+      // Apply date filtering if date filters are active
+      if (startDateFilter || endDateFilter) {
+        filteredForPair = filteredForPair.filter((deal) => {
+          if (!deal.DATE_CREATE) return false
+
+          try {
+            // Parse the date string "2025-09-15T11:44:52+07:00"
+            const dealDate = new Date(deal.DATE_CREATE)
+            if (isNaN(dealDate.getTime())) return false
+
+            if (startDateFilter) {
+              const start = new Date(startDateFilter)
+              start.setHours(0, 0, 0, 0)
+              if (dealDate < start) return false
+            }
+
+            if (endDateFilter) {
+              const end = new Date(endDateFilter)
+              end.setHours(23, 59, 59, 999)
+              if (dealDate > end) return false
+            }
+
+            return true
+          } catch (error) {
+            console.error("Error parsing date:", deal.DATE_CREATE, error)
+            return false
+          }
+        })
+      }
 
       console.log(`🔍 Dữ liệu sau khi lọc thủ công: ${filteredForPair.length} deals`)
 
@@ -1027,8 +722,31 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
       const customFilename = `${sanitizedSchool}_${sanitizedWard}_${filteredForPair.length}deal_${exportDate}`
 
       try {
-        // Export data directly using the manually filtered data
-        await exportAutomationDataDirect(filteredForPair, () => duplicateData, customFilename)
+        // Filter duplicate data for this specific pair
+        const pairDuplicateData = duplicateData.map(group => ({
+          ...group,
+          deals: group.deals.filter(deal => deal.schoolName === school && deal.ward === ward)
+        })).filter(group => group.deals.length > 0)
+
+        // Filter summary data for this specific pair
+        const pairSummaryData = chartData?.schoolWardDuplicateData?.filter((item: any) =>
+          item.school === school && item.ward === ward
+        ) || []
+
+
+
+        exportMultiFormat({
+          format: exportFormat,
+          includeSummary: exportIncludeSummary,
+          includeDeals: exportIncludeDeals,
+          includeDuplicates: exportIncludeDuplicates,
+          summaryData: pairSummaryData,
+          dealsData: filteredForPair, // Use manually filtered data instead of state
+          duplicateData: pairDuplicateData,
+          correctDataSelections,
+          duplicateExportGrouped,
+          customFilename
+        })
 
         console.log(`✅ Thành công: ${customFilename}.xlsx (${filteredForPair.length} deals)`)
       } catch (error) {
@@ -1048,114 +766,7 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
     alert(`✅ Hoàn thành! Đã export ${pairsToProcess.length} file Excel.\n\nMỗi file chứa dữ liệu của 1 cặp Trường-Phường.\nKiểm tra thư mục Downloads!`)
   }
 
-  // Direct export function that takes data as parameter
-  const exportAutomationDataDirect = async (dealsData: Deal[], getDuplicateData: () => any[], filename: string) => {
-    const wb = XLSX.utils.book_new()
 
-    // Format date function for Vietnam timezone
-    const formatVietnamDateTime = (dateString?: string): string => {
-      if (!dateString) return ""
-      try {
-        const date = new Date(dateString)
-        return date.toLocaleString('vi-VN', {
-          timeZone: 'Asia/Ho_Chi_Minh',
-          year: 'numeric',
-          month: '2-digit',
-          day: '2-digit',
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit'
-        })
-      } catch (error) {
-        return dateString
-      }
-    }
-
-    // Export deals data
-    if (dealsData.length > 0) {
-      const dealsExcelData = dealsData.map((deal, index) => ({
-        "STT": index + 1,
-        "ID": deal.ID || "",
-        "Tên học sinh": deal.studentName || "",
-        "Tên phụ huynh": deal.parentOfStudentName || "",
-        "Khối": deal.grade || "",
-        "Lớp": deal.className || "",
-        "Email": deal.email || "",
-        "Số điện thoại": deal.phone || "",
-        "Trường học": deal.schoolName || "",
-        "Phường/Quận": deal.ward || "",
-        "Địa chỉ": deal.address || "",
-        "Ngày tạo (VN)": formatVietnamDateTime(deal.DATE_CREATE),
-        "Trường (PH tự nhập)": deal.schoolNameTmp || "",
-      }))
-
-      const dealsWs = XLSX.utils.json_to_sheet(dealsExcelData)
-      const dealsColWidths = [
-        { wch: 6 },  // STT
-        { wch: 10 }, // ID
-        { wch: 20 }, // Tên học sinh
-        { wch: 20 }, // Tên phụ huynh
-        { wch: 10 }, // Khối
-        { wch: 15 }, // Lớp
-        { wch: 30 }, // Email
-        { wch: 15 }, // Số điện thoại
-        { wch: 25 }, // Trường học
-        { wch: 20 }, // Phường/Quận
-        { wch: 30 }, // Địa chỉ
-        { wch: 20 }, // Ngày tạo
-        { wch: 25 }, // Trường (PH tự nhập)
-      ]
-      dealsWs['!cols'] = dealsColWidths
-
-      // Apply styling
-      if (dealsWs["!ref"]) {
-        const range = XLSX.utils.decode_range(dealsWs["!ref"]);
-        const headerRow = range.s.r;
-
-        const purpleFill = {
-          patternType: "solid",
-          fgColor: { rgb: "800080" },
-        };
-        const whiteFont = { color: { rgb: "FFFFFF" }, bold: true };
-        const thinBorder = {
-          top: { style: "thin", color: { auto: 1 } },
-          bottom: { style: "thin", color: { auto: 1 } },
-          left: { style: "thin", color: { auto: 1 } },
-          right: { style: "thin", color: { auto: 1 } },
-        };
-
-        // Style header
-        for (let C = range.s.c; C <= range.e.c; ++C) {
-          const cellAddress = XLSX.utils.encode_cell({ r: headerRow, c: C });
-          const cell = dealsWs[cellAddress];
-          if (cell) {
-            cell.s = {
-              fill: purpleFill,
-              font: whiteFont,
-              border: thinBorder,
-              alignment: { horizontal: "center", vertical: "center" },
-            };
-          }
-        }
-
-        // Style all cells with borders
-        for (let R = headerRow + 1; R <= range.e.r; ++R) {
-          for (let C = range.s.c; C <= range.e.c; ++C) {
-            const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
-            const cell = dealsWs[cellAddress];
-            if (cell) {
-              cell.s = { ...(cell.s || {}), border: thinBorder };
-            }
-          }
-        }
-      }
-
-      XLSX.utils.book_append_sheet(wb, dealsWs, "Danh sách deals")
-    }
-
-    // Save with custom filename
-    XLSX.writeFile(wb, filename + ".xlsx")
-  }
 
   return (
     <div className="space-y-6">

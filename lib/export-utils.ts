@@ -690,7 +690,8 @@ export const exportMultiFormat = (
     dealsData?: Deal[]
     duplicateData?: { name: string; email: string; count: number; deals: Deal[] }[]
     correctDataSelections?: Record<string, string[]>
-    duplicateExportGrouped?: boolean
+    duplicateExportGrouped?: boolean,
+    customFilename?: string,
   }
 ) => {
   const {
@@ -725,6 +726,7 @@ export const exportMultiFormat = (
       duplicateData,
       correctDataSelections,
       duplicateExportGrouped,
+      customeFileName: options.customFilename,
     })
   } else if (format === 'json') {
     // Export JSON with multiple data types
@@ -859,7 +861,8 @@ export const exportMultiSheetExcel = (
     dealsData?: Deal[]
     duplicateData?: { name: string; email: string; count: number; deals: Deal[] }[]
     correctDataSelections?: Record<string, string[]>
-    duplicateExportGrouped?: boolean
+    duplicateExportGrouped?: boolean,
+    customeFileName?: string,
   }
 ) => {
   const {
@@ -871,6 +874,7 @@ export const exportMultiSheetExcel = (
     duplicateData = [],
     correctDataSelections = {},
     duplicateExportGrouped = true,
+    customeFileName = null,
   } = options
 
   // Check if at least one type is selected and has data
@@ -1132,6 +1136,6 @@ export const exportMultiSheetExcel = (
   if (hasDealsData) selectedTypes.push("deals")
   if (hasDuplicateData) selectedTypes.push("duplicates")
 
-  const fileName = `export-${selectedTypes.join("-")}-${new Date().toISOString().split("T")[0]}.xlsx`
+  const fileName = (customeFileName && customeFileName != '') ? customeFileName + '.xlsx' : `export-${selectedTypes.join("-")}-${new Date().toISOString().split("T")[0]}.xlsx`
   XLSX.writeFile(wb, fileName)
 }
