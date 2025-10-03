@@ -169,7 +169,7 @@ export function AdvancedAnalytics({ data }: AdvancedAnalyticsProps) {
         stats.count++
         if (deal.ward) stats.wards.add(deal.ward)
         if (deal.grade) stats.grades.add(deal.grade)
-        if ((deal.email && deal.email.trim()) || (deal.phone && deal.phone.trim())) {
+        if ((deal.email && deal.email.trim()) || (normalizeVietnamPhone(deal.phone) && normalizeVietnamPhone(deal.phone).trim())) {
           stats.withContact++
         }
       })
@@ -200,7 +200,7 @@ export function AdvancedAnalytics({ data }: AdvancedAnalyticsProps) {
         const stats = gradeStats.get(grade)!
         stats.count++
         if (deal.schoolName) stats.schools.add(deal.schoolName)
-        if ((deal.email && deal.email.trim()) || (deal.phone && deal.phone.trim())) {
+        if ((deal.email && deal.email.trim()) || (normalizeVietnamPhone(deal.phone) && normalizeVietnamPhone(deal.phone).trim())) {
           stats.withContact++
         }
       })

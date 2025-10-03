@@ -11,7 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils"
 import { format } from "date-fns"
 import * as EmailValidator from 'email-validator';
-import * as XLSX from 'sheetjs-style'
+import {toTitleCase, normalizeVietnamPhone} from "@/lib/utils";
 import { exportToCSV, exportToJSON, exportToExcel, exportDuplicateDataToExcel, exportSummaryAndDuplicateToExcel, exportMultiSheetExcel, exportMultiFormat } from "@/lib/export-utils"
 import {
   RefreshCw,
@@ -141,10 +141,10 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
       const query = searchQuery.toLowerCase()
       filtered = filtered.filter(
         (deal) =>
-          (deal.studentName || "").toLowerCase().includes(query) ||
-          (deal.parentOfStudentName || "").toLowerCase().includes(query) ||
+          (toTitleCase(deal.studentName) || "").toLowerCase().includes(query) ||
+          (toTitleCase(deal.parentOfStudentName) || "").toLowerCase().includes(query) ||
           (deal.email || "").toLowerCase().includes(query) ||
-          (deal.phone || "").toLowerCase().includes(query),
+          (normalizeVietnamPhone(deal.phone) || "").toLowerCase().includes(query),
       )
     }
 
@@ -443,7 +443,7 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
         acc[key].total += 1
 
         // Check for duplicates based on student name or parent name
-        const studentKey = deal.studentName?.trim().toLowerCase() || deal.parentOfStudentName?.trim().toLowerCase()
+        const studentKey = toTitleCase(deal.studentName)?.trim().toLowerCase() || toTitleCase(deal.parentOfStudentName)?.trim().toLowerCase()
         if (studentKey) {
           if (acc[key].students.has(studentKey)) {
             acc[key].duplicates += 1
@@ -568,8 +568,8 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
     const duplicateGroups: Record<string, { name: string; email: string; count: number; deals: Deal[] }> = {}
 
     filteredDeals.forEach((deal) => {
-      const studentName = normalizeText(deal.studentName)
-      const parentName = normalizeText(deal.parentOfStudentName)
+      const studentName = normalizeText(toTitleCase(deal.studentName))
+      const parentName = normalizeText(toTitleCase(deal.parentOfStudentName))
       const email = deal.email?.trim().toLowerCase() || ""
 
       // Use whichever name is available (student name takes precedence)
@@ -1502,12 +1502,12 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
                       {currentDeals.map((deal) => (
                         <tr key={deal.ID} className="border-b hover:bg-muted/50">
                           <td className="p-2 text-sm">{deal.ID}</td>
-                          <td className="p-2 text-sm">{deal.studentName || "-"}</td>
-                          <td className="p-2 text-sm">{deal.parentOfStudentName || "-"}</td>
+                          <td className="p-2 text-sm">{toTitleCase(deal.studentName) || "-"}</td>
+                          <td className="p-2 text-sm">{toTitleCase(deal.parentOfStudentName) || "-"}</td>
                           <td className="p-2 text-sm">{deal.grade || "-"}</td>
                           <td className="p-2 text-sm">{deal.className || "-"}</td>
                           <td className="p-2 text-sm">{deal.email || "-"}</td>
-                          <td className="p-2 text-sm">{deal.phone || "-"}</td>
+                          <td className="p-2 text-sm">{normalizeVietnamPhone(deal.phone) || "-"}</td>
                           <td className="p-2 text-sm">{deal.schoolName || "-"}</td>
                           <td className="p-2 text-sm">{deal.ward || "-"}</td>
                           <td className="p-2 text-sm">{deal.schoolNameTmp || "-"}</td>
@@ -1726,11 +1726,11 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
                                   {group.deals.map((deal, index) => (
                                     <tr key={deal.ID} className={`border-b hover:bg-muted/20 ${selectedIds.includes(deal.ID) ? 'bg-blue-50' : ''}`}>
                                       <td className="p-2 text-sm">{deal.ID}</td>
-                                      <td className="p-2 text-sm">{deal.studentName || "-"}</td>
-                                      <td className="p-2 text-sm">{deal.parentOfStudentName || "-"}</td>
+                                      <td className="p-2 text-sm">{toTitleCase(deal.studentName) || "-"}</td>
+                                      <td className="p-2 text-sm">{toTitleCase(deal.parentOfStudentName) || "-"}</td>
                                       <td className="p-2 text-sm">{deal.grade || "-"}</td>
                                       <td className="p-2 text-sm">{deal.className || "-"}</td>
-                                      <td className="p-2 text-sm">{deal.phone || "-"}</td>
+                                      <td className="p-2 text-sm">{normalizeVietnamPhone(deal.phone) || "-"}</td>
                                       <td className="p-2 text-sm">{deal.email || "-"}</td>
                                       <td className="p-2 text-sm">{deal.schoolName || "-"}</td>
                                       <td className="p-2 text-sm">{deal.ward || "-"}</td>
@@ -1792,11 +1792,11 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
                                   </td>
                                   <td className="p-3 text-sm">{groupLabel}</td>
                                   <td className="p-3 text-sm">{deal.ID}</td>
-                                  <td className="p-3 text-sm">{deal.studentName || "-"}</td>
-                                  <td className="p-3 text-sm">{deal.parentOfStudentName || "-"}</td>
+                                  <td className="p-3 text-sm">{toTitleCase(deal.studentName) || "-"}</td>
+                                  <td className="p-3 text-sm">{toTitleCase(deal.parentOfStudentName) || "-"}</td>
                                   <td className="p-3 text-sm">{deal.grade || "-"}</td>
                                   <td className="p-3 text-sm">{deal.className || "-"}</td>
-                                  <td className="p-3 text-sm">{deal.phone || "-"}</td>
+                                  <td className="p-3 text-sm">{normalizeVietnamPhone(deal.phone) || "-"}</td>
                                   <td className="p-3 text-sm">{deal.schoolName || "-"}</td>
                                   <td className="p-3 text-sm">{deal.ward || "-"}</td>
                                   <td className="p-3 text-sm">{deal.DATE_CREATE ? new Date(deal.DATE_CREATE).toLocaleDateString('vi-VN') : "-"}</td>

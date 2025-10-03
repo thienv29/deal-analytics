@@ -1,5 +1,6 @@
 import { Deal } from "@/components/deals-analytics"
 import * as XLSX from 'sheetjs-style'
+import {toTitleCase, normalizeVietnamPhone} from "./utils"
 
 function styleSheetHeaderAndBorder(ws: XLSX.WorkSheet) {
   if (!ws["!ref"]) return ws; // không có data thì thôi
@@ -86,8 +87,8 @@ function styleDealsSheetWithDuplicates(ws: XLSX.WorkSheet, dealsData: Deal[]) {
   // Detect duplicate groups
   const duplicateGroups: Record<string, Set<number>> = {} // key -> set of row indices
   const normalizedDeals = dealsData.map((deal, index) => {
-    const studentName = normalizeTextForDuplicates(deal.studentName)
-    const parentName = normalizeTextForDuplicates(deal.parentOfStudentName)
+    const studentName = normalizeTextForDuplicates(toTitleCase(deal.studentName))
+    const parentName = normalizeTextForDuplicates(toTitleCase(deal.parentOfStudentName))
     const email = deal.email?.trim().toLowerCase() || ""
 
     // Use whichever name is available (student name takes precedence)
@@ -160,12 +161,12 @@ export const exportToCSV = (filteredDeals: Deal[]) => {
     ...filteredDeals.map((deal) =>
       [
         deal.ID || "",
-        `"${(deal.studentName || "").replace(/"/g, '""')}"`,
-        `"${(deal.parentOfStudentName || "").replace(/"/g, '""')}"`,
+        `"${(toTitleCase(deal.studentName) || "").replace(/"/g, '""')}"`,
+        `"${(toTitleCase(deal.parentOfStudentName) || "").replace(/"/g, '""')}"`,
         deal.grade || "",
         `"${(deal.className || "").replace(/"/g, '""')}"`,
         deal.email || "",
-        deal.phone || "",
+        normalizeVietnamPhone(deal.phone) || "",
         `"${(deal.schoolName || "").replace(/"/g, '""')}"`,
         `"${(deal.ward || "").replace(/"/g, '""')}"`,
         `"${(deal.address || "").replace(/"/g, '""')}"`,
@@ -227,12 +228,12 @@ export const exportToExcel = (filteredDeals: Deal[]) => {
   // Prepare data for Excel export
   const excelData = sortedDeals.map((deal) => ({
     "ID": deal.ID || "",
-    "Tên học sinh": deal.studentName || "",
-    "Tên phụ huynh": deal.parentOfStudentName || "",
+    "Tên học sinh": toTitleCase(deal.studentName) || "",
+    "Tên phụ huynh": toTitleCase(deal.parentOfStudentName) || "",
     "Khối": deal.grade || "",
     "Lớp": deal.className || "",
     "Email": deal.email || "",
-    "Số điện thoại": deal.phone || "",
+    "Số điện thoại": normalizeVietnamPhone(deal.phone) || "",
     "Trường học": deal.schoolName || "",
     "Phường/Quận": deal.ward || "",
     "Địa chỉ": deal.address || "",
@@ -334,12 +335,12 @@ export const exportDuplicateDataToExcel = (
           "Email trùng": "",
           "Số lượng": "",
           "ID": deal.ID || "",
-          "Tên học sinh": deal.studentName || "",
-          "Tên phụ huynh": deal.parentOfStudentName || "",
+          "Tên học sinh": toTitleCase(deal.studentName) || "",
+          "Tên phụ huynh": toTitleCase(deal.parentOfStudentName) || "",
           "Khối": deal.grade || "",
           "Lớp": deal.className || "",
           "Email": deal.email || "",
-          "Số điện thoại": deal.phone || "",
+          "Số điện thoại": normalizeVietnamPhone(deal.phone) || "",
           "Trường học": deal.schoolName || "",
           "Phường/Quận": deal.ward || "",
           "Địa chỉ": deal.address || "",
@@ -394,12 +395,12 @@ export const exportDuplicateDataToExcel = (
         excelData.push({
           "Nhóm trùng lặp": `${info.groupName} - ${info.groupEmail || 'Không có email'}`,
           "ID": deal.ID || "",
-          "Tên học sinh": deal.studentName || "",
-          "Tên phụ huynh": deal.parentOfStudentName || "",
+          "Tên học sinh": toTitleCase(deal.studentName) || "",
+          "Tên phụ huynh": toTitleCase(deal.parentOfStudentName) || "",
           "Khối": deal.grade || "",
           "Lớp": deal.className || "",
           "Email": deal.email || "",
-          "Số điện thoại": deal.phone || "",
+          "Số điện thoại": normalizeVietnamPhone(deal.phone) || "",
           "Trường học": deal.schoolName || "",
           "Phường/Quận": deal.ward || "",
           "Địa chỉ": deal.address || "",
@@ -554,12 +555,12 @@ export const exportSummaryAndDuplicateToExcel = (
             "Email trùng": "",
             "Số lượng": "",
             "ID": deal.ID || "",
-            "Tên học sinh": deal.studentName || "",
-            "Tên phụ huynh": deal.parentOfStudentName || "",
+            "Tên học sinh": toTitleCase(deal.studentName) || "",
+            "Tên phụ huynh": toTitleCase(deal.parentOfStudentName) || "",
             "Khối": deal.grade || "",
             "Lớp": deal.className || "",
             "Email": deal.email || "",
-            "Số điện thoại": deal.phone || "",
+            "Số điện thoại": normalizeVietnamPhone(deal.phone) || "",
             "Trường học": deal.schoolName || "",
             "Phường/Quận": deal.ward || "",
             "Địa chỉ": deal.address || "",
@@ -614,12 +615,12 @@ export const exportSummaryAndDuplicateToExcel = (
         duplicateExcelData.push({
           "Nhóm trùng lặp": `${info.groupName} - ${info.groupEmail || 'Không có email'}`,
           "ID": deal.ID || "",
-          "Tên học sinh": deal.studentName || "",
-          "Tên phụ huynh": deal.parentOfStudentName || "",
+          "Tên học sinh": toTitleCase(deal.studentName) || "",
+          "Tên phụ huynh": toTitleCase(deal.parentOfStudentName) || "",
           "Khối": deal.grade || "",
           "Lớp": deal.className || "",
           "Email": deal.email || "",
-          "Số điện thoại": deal.phone || "",
+          "Số điện thoại": normalizeVietnamPhone(deal.phone) || "",
           "Trường học": deal.schoolName || "",
           "Phường/Quận": deal.ward || "",
           "Địa chỉ": deal.address || "",
@@ -940,12 +941,12 @@ export const exportMultiSheetExcel = (
 
     const dealsExcelData = sortedDeals.map((deal) => ({
       "ID": deal.ID || "",
-      "Tên học sinh": deal.studentName || "",
-      "Tên phụ huynh": deal.parentOfStudentName || "",
+      "Tên học sinh": toTitleCase(toTitleCase(deal.studentName)) || "",
+      "Tên phụ huynh": toTitleCase(deal.parentOfStudentName) || "",
       "Khối": deal.grade || "",
       "Lớp": deal.className || "",
       "Email": deal.email || "",
-      "Số điện thoại": deal.phone || "",
+      "Số điện thoại": normalizeVietnamPhone(deal.phone) || "",
       "Trường học": deal.schoolName || "",
       "Phường/Quận": deal.ward || "",
       "Địa chỉ": deal.address || "",
@@ -1009,12 +1010,12 @@ export const exportMultiSheetExcel = (
             "Email trùng": "",
             "Số lượng": "",
             "ID": deal.ID || "",
-            "Tên học sinh": deal.studentName || "",
-            "Tên phụ huynh": deal.parentOfStudentName || "",
+            "Tên học sinh": toTitleCase(deal.studentName) || "",
+            "Tên phụ huynh": toTitleCase(deal.parentOfStudentName) || "",
             "Khối": deal.grade || "",
             "Lớp": deal.className || "",
             "Email": deal.email || "",
-            "Số điện thoại": deal.phone || "",
+            "Số điện thoại": normalizeVietnamPhone(deal.phone) || "",
             "Trường học": deal.schoolName || "",
             "Phường/Quận": deal.ward || "",
             "Địa chỉ": deal.address || "",
@@ -1069,12 +1070,12 @@ export const exportMultiSheetExcel = (
         duplicateExcelData.push({
           "Nhóm trùng lặp": `${info.groupName} - ${info.groupEmail || 'Không có email'}`,
           "ID": deal.ID || "",
-          "Tên học sinh": deal.studentName || "",
-          "Tên phụ huynh": deal.parentOfStudentName || "",
+          "Tên học sinh": toTitleCase(deal.studentName) || "",
+          "Tên phụ huynh": toTitleCase(deal.parentOfStudentName) || "",
           "Khối": deal.grade || "",
           "Lớp": deal.className || "",
           "Email": deal.email || "",
-          "Số điện thoại": deal.phone || "",
+          "Số điện thoại": normalizeVietnamPhone(deal.phone) || "",
           "Trường học": deal.schoolName || "",
           "Phường/Quận": deal.ward || "",
           "Địa chỉ": deal.address || "",
