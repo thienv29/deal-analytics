@@ -714,9 +714,9 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
 
       // Generate filename with school and ward
       const sanitizedSchool = school.replace(/[^a-zA-Z0-9\u00C0-\u024F\u1E00-\u1EFF]/g, '_')
-        .replace(/_{2,}/g, '_').toLowerCase()
+        .replace(/_{2,}/g, '_')
       const sanitizedWard = ward.replace(/[^a-zA-Z0-9\u00C0-\u024F\u1E00-\u1EFF]/g, '_')
-        .replace(/_{2,}/g, '_').toLowerCase()
+        .replace(/_{2,}/g, '_')
 
       const exportDate = new Date().toISOString().split('T')[0]
       const customFilename = `${sanitizedSchool}_${sanitizedWard}_${filteredForPair.length}deal_${exportDate}`
