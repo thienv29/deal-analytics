@@ -2029,24 +2029,43 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
                         return (
                           <div key={groupKey} className="border rounded-lg p-4">
                             <div className="flex items-center justify-between mb-3">
-                              <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-medium text-sm">Tên trùng:</span>
-                                  <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-medium">
-                                    {group.name}
-                                  </span>
-                                </div>
-                                {group.email && (
+                              <div className="flex w-full justify-between sm:flex-row sm:items-center gap-2">
+                                <div className="">
                                   <div className="flex items-center gap-2">
-                                    <span className="font-medium text-sm">Email trùng:</span>
-                                    <span className="bg-red-100 text-red-800 px-2 py-1 rounded text-xs font-medium">
-                                      {group.email}
+                                    <span className="font-medium text-sm">Tên trùng:</span>
+                                    <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-medium">
+                                      {group.name}
                                     </span>
                                   </div>
-                                )}
-                                <span className="text-sm text-muted-foreground">
-                                  ({group.count} bản ghi) - Đã chọn: {selectedIds.length} bản ghi đúng
-                                </span>
+                                  {group.email && (
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-medium text-sm">Email trùng:</span>
+                                      <span className="bg-red-100 text-red-800 px-2 py-1 rounded text-xs font-medium">
+                                        {group.email}
+                                      </span>
+                                    </div>
+                                  )}
+                                  <span className="text-sm text-muted-foreground">
+                                    ({group.count} bản ghi)
+                                  </span>
+                                </div>
+                                {group.deals.length == 2 && (group.deals[0].phone == group.deals[1].phone 
+                                  && group.deals[0].studentName == group.deals[1].studentName
+                                  && group.deals[0].parentOfStudentName == group.deals[1].parentOfStudentName
+                                  && group.deals[0].schoolName == group.deals[1].schoolName
+                                  && group.deals[0].ward == group.deals[1].ward
+                                  && group.deals[0].className == group.deals[1].className
+                                  && group.deals[0].grade == group.deals[1].grade
+                                  && group.deals[0].schoolNameTmp == group.deals[1].schoolNameTmp) && (<Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => deleteDuplicateDeal(group.deals[0].ID)}
+                                          className="h-8 px-2 text-xs hover:bg-red-50 hover:border-red-200 hover:text-red-700"
+                                        >
+                                          <X className="h-3 w-3 mr-1" />
+                                          Xóa trùng dữ liệu
+                                        </Button>)
+                                  }
                               </div>
                             </div>
 
