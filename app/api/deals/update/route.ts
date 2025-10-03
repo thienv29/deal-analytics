@@ -27,7 +27,7 @@ export async function POST(request: Request) {
           UF_CRM_1759402265: "Y",
         },
       }),
-      next: { revalidate: 300 },
+      cache: 'no-store',
     })
 
     if (!response.ok) {

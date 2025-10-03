@@ -37,7 +37,7 @@ export async function GET() {
         Accept: "application/json",
         "Content-Type": "application/json",
       },
-      next: { revalidate: 300 },
+      cache: 'no-store',
     })
 
     if (!countResponse.ok) {
@@ -74,7 +74,7 @@ export async function GET() {
             Accept: "application/json",
             "Content-Type": "application/json",
           },
-          next: { revalidate: 300 },
+          cache: 'no-store',
         }).then(async (response) => {
           if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`)
