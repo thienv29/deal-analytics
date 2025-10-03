@@ -54,21 +54,21 @@ interface DealsAnalyticsProps {
   onDataLoad?: (data: Deal[]) => void
 }
 
-  const isValidEmail = (email: string): boolean => {
-    return EmailValidator.validate(email)
-  }
+const isValidEmail = (email: string): boolean => {
+  return EmailValidator.validate(email)
+}
 
-  // Function to remove Vietnamese accents and convert to lowercase
-  const normalizeText = (text?: string): string => {
-    if (!text || !text.trim()) return ""
-    return text
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '') // Remove accents
-      .replace(/đ/g, 'd') // Replace đ with d
-      .replace(/Đ/g, 'D')
-      .trim()
-  }
+// Function to remove Vietnamese accents and convert to lowercase
+const normalizeText = (text?: string): string => {
+  if (!text || !text.trim()) return ""
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove accents
+    .replace(/đ/g, 'd') // Replace đ with d
+    .replace(/Đ/g, 'D')
+    .trim()
+}
 
 export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
   const [deals, setDeals] = useState<Deal[]>([])
@@ -98,7 +98,7 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc")
 
   const [tableSortField, setTableSortField] = useState<
-    "ID" | "studentName" | "parentOfStudentName" | "grade" | "className" | "email" | "phone" | "schoolName" | "ward"| "schoolNameTmp"
+    "ID" | "studentName" | "parentOfStudentName" | "grade" | "className" | "email" | "phone" | "schoolName" | "ward" | "schoolNameTmp"
   >("ID")
   const [tableSortDirection, setTableSortDirection] = useState<"asc" | "desc">("asc")
 
@@ -1527,13 +1527,12 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
                               <td className="p-3 text-sm text-right text-orange-600">{item.duplicates}</td>
                               <td className="p-3 text-sm text-right">
                                 <span
-                                  className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                    Number.parseFloat(item.duplicateRate) > 20
+                                  className={`px-2 py-1 rounded-full text-xs font-medium ${Number.parseFloat(item.duplicateRate) > 20
                                       ? "bg-red-100 text-red-800"
                                       : Number.parseFloat(item.duplicateRate) > 10
                                         ? "bg-orange-100 text-orange-800"
                                         : "bg-green-100 text-green-800"
-                                  }`}
+                                    }`}
                                 >
                                   {item.duplicateRate}%
                                 </span>
@@ -1752,70 +1751,70 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
                     schoolValidityFilter !== 'all' ||
                     startDateFilter ||
                     endDateFilter) && (
-                    <div className="flex flex-wrap items-center gap-2 text-sm">
-                      <span className="text-muted-foreground font-medium">Đang lọc:</span>
-                      {schoolWardPairFilter && schoolWardPairFilter !== "all" && (
-                        <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-medium">
-                          {schoolWardPairFilter}
-                        </span>
-                      )}
-                      {gradeFilter && gradeFilter !== "all" && (
-                        <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-medium">
-                          Khối {gradeFilter}
-                        </span>
-                      )}
-                      {!schoolWardPairFilter && schoolFilter && schoolFilter !== "all" && (
-                        <span className="bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-xs font-medium">
-                          {schoolFilter}
-                        </span>
-                      )}
-                      {!schoolWardPairFilter && wardFilter && wardFilter !== "all" && (
-                        <span className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-xs font-medium">
-                          {wardFilter}
-                        </span>
-                      )}
-                      {duplicateEmailFilter && (
-                        <span className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-xs font-medium">
-                          Email trùng lặp
-                        </span>
-                      )}
-                      {emailValidityFilter === 'valid' && (
-                        <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-medium">
-                          Email hợp lệ
-                        </span>
-                      )}
-                      {emailValidityFilter === 'invalid' && (
-                        <span className="bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-xs font-medium">
-                          Email không hợp lệ
-                        </span>
-                      )}
-                      {schoolValidityFilter === 'valid' && (
-                        <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-medium">
-                          Trường hợp lệ
-                        </span>
-                      )}
-                      {schoolValidityFilter === 'invalid_empty' && (
-                        <span className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-xs font-medium">
-                          Trường không hợp lệ hoặc trống
-                        </span>
-                      )}
-                      {searchQuery && (
-                        <span className="bg-gray-100 text-gray-800 px-3 py-1 rounded-full text-xs font-medium">
-                          "{searchQuery}"
-                        </span>
-                      )}
-                      {startDateFilter && (
-                        <span className="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-xs font-medium">
-                          Từ {format(startDateFilter, "dd/MM/yyyy")}
-                        </span>
-                      )}
-                      {endDateFilter && (
-                        <span className="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-xs font-medium">
-                          Đến {format(endDateFilter, "dd/MM/yyyy")}
-                        </span>
-                      )}
-                    </div>
-                  )}
+                      <div className="flex flex-wrap items-center gap-2 text-sm">
+                        <span className="text-muted-foreground font-medium">Đang lọc:</span>
+                        {schoolWardPairFilter && schoolWardPairFilter !== "all" && (
+                          <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-medium">
+                            {schoolWardPairFilter}
+                          </span>
+                        )}
+                        {gradeFilter && gradeFilter !== "all" && (
+                          <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-medium">
+                            Khối {gradeFilter}
+                          </span>
+                        )}
+                        {!schoolWardPairFilter && schoolFilter && schoolFilter !== "all" && (
+                          <span className="bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-xs font-medium">
+                            {schoolFilter}
+                          </span>
+                        )}
+                        {!schoolWardPairFilter && wardFilter && wardFilter !== "all" && (
+                          <span className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-xs font-medium">
+                            {wardFilter}
+                          </span>
+                        )}
+                        {duplicateEmailFilter && (
+                          <span className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-xs font-medium">
+                            Email trùng lặp
+                          </span>
+                        )}
+                        {emailValidityFilter === 'valid' && (
+                          <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-medium">
+                            Email hợp lệ
+                          </span>
+                        )}
+                        {emailValidityFilter === 'invalid' && (
+                          <span className="bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-xs font-medium">
+                            Email không hợp lệ
+                          </span>
+                        )}
+                        {schoolValidityFilter === 'valid' && (
+                          <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-medium">
+                            Trường hợp lệ
+                          </span>
+                        )}
+                        {schoolValidityFilter === 'invalid_empty' && (
+                          <span className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-xs font-medium">
+                            Trường không hợp lệ hoặc trống
+                          </span>
+                        )}
+                        {searchQuery && (
+                          <span className="bg-gray-100 text-gray-800 px-3 py-1 rounded-full text-xs font-medium">
+                            "{searchQuery}"
+                          </span>
+                        )}
+                        {startDateFilter && (
+                          <span className="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-xs font-medium">
+                            Từ {format(startDateFilter, "dd/MM/yyyy")}
+                          </span>
+                        )}
+                        {endDateFilter && (
+                          <span className="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-xs font-medium">
+                            Đến {format(endDateFilter, "dd/MM/yyyy")}
+                          </span>
+                        )}
+                      </div>
+                    )}
                 </div>
               </CardContent>
             </Card>
@@ -2049,23 +2048,49 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
                                     ({group.count} bản ghi)
                                   </span>
                                 </div>
-                                {group.deals.length == 2 && (group.deals[0].phone?.trim() == group.deals[1].phone?.trim() 
-                                  && group.deals[0].studentName?.trim() == group.deals[1].studentName?.trim()
-                                  && group.deals[0].parentOfStudentName?.trim() == group.deals[1].parentOfStudentName?.trim()
-                                  && group.deals[0].schoolName?.trim() == group.deals[1].schoolName?.trim()
-                                  && group.deals[0].ward?.trim() == group.deals[1].ward?.trim()
-                                  && group.deals[0].className?.trim() == group.deals[1].className?.trim()
-                                  && group.deals[0].grade?.trim() == group.deals[1].grade?.trim()
-                                  && group.deals[0].schoolNameTmp?.trim() == group.deals[1].schoolNameTmp?.trim()) && (<Button
-                                          variant="outline"
-                                          size="sm"
-                                          onClick={() => deleteDuplicateDeal(group.deals[0].ID)}
-                                          className="h-8 px-2 text-xs hover:bg-red-50 hover:border-red-200 hover:text-red-700"
-                                        >
-                                          <X className="h-3 w-3 mr-1" />
-                                          Xóa trùng dữ liệu
-                                        </Button>)
+                                {group.deals.length === 2 && (() => {
+                                  const deal1 = group.deals[0];
+                                  const deal2 = group.deals[1];
+
+                                  const fields = [
+                                    "phone",
+                                    "studentName",
+                                    "parentOfStudentName",
+                                    "schoolName",
+                                    "ward",
+                                    "className",
+                                    "grade",
+                                    "schoolNameTmp",
+                                  ] as const;
+
+                                  const differences = fields.filter(field => {
+                                    const val1 = (deal1[field] ?? "").toString().trim().toLowerCase();
+                                    const val2 = (deal2[field] ?? "").toString().trim().toLowerCase();
+                                    return val1 !== val2;
+                                  });
+
+                                  if (differences.length === 0) {
+                                    // trùng nhau → hiện nút xóa
+                                    return (
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => deleteDuplicateDeal(deal1.ID)}
+                                        className="h-8 px-2 text-xs hover:bg-red-50 hover:border-red-200 hover:text-red-700"
+                                      >
+                                        <X className="h-3 w-3 mr-1" />
+                                        Xóa trùng dữ liệu
+                                      </Button>
+                                    );
+                                  } else {
+                                    // không trùng → hiển thị các trường khác nhau
+                                    return (
+                                      <div className="text-xs text-red-600">
+                                        Các trường khác nhau: {differences.join(", ")}
+                                      </div>
+                                    );
                                   }
+                                })()}
                               </div>
                             </div>
 
