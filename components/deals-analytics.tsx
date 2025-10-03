@@ -354,7 +354,7 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
 
     const gradeContactMatrix = Object.entries(analytics.gradeStats)
       .map(([grade, total]) => {
-        const gradeDeals = deals.filter((d) => d.grade === grade)
+        const gradeDeals = filteredDeals.filter((d) => d.grade === grade)
         const withContact = gradeDeals.filter((d) => (d.email && d.email.trim()) || (d.phone && d.phone.trim())).length
         return {
           grade,
@@ -366,7 +366,7 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
       })
       .sort((a, b) => a.grade.localeCompare(b.grade))
 
-    const schoolWardCombos = deals.reduce((acc: Record<string, number>, deal) => {
+    const schoolWardCombos = filteredDeals.reduce((acc: Record<string, number>, deal) => {
       if (deal.schoolName && deal.ward) {
         const key = `${deal.schoolName}-${deal.ward}`
         acc[key] = (acc[key] || 0) + 1
@@ -374,11 +374,11 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
       return acc
     }, {})
 
-    const contactCount = deals.filter((d) => (d.email && d.email.trim()) || (d.phone && d.phone.trim())).length
+    const contactCount = filteredDeals.filter((d) => (d.email && d.email.trim()) || (d.phone && d.phone.trim())).length
 
     console.log("[v0] School-ward combos calculated:", Object.keys(schoolWardCombos).length, "combos")
 
-    const dailyDeals = deals.reduce((acc: Record<string, number>, deal) => {
+    const dailyDeals = filteredDeals.reduce((acc: Record<string, number>, deal) => {
       if (deal.DATE_CREATE) {
         try {
           // Handle different date formats: "YYYY-MM-DD HH:mm:ss" or "YYYY-MM-DDTHH:mm:ss"
@@ -424,7 +424,7 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
     console.log("[v0] Daily deals data calculated:", dailyDealsData.length, "days")
     console.log("[v0] Sample daily data:", dailyDealsData.slice(0, 3))
 
-    const schoolWardAnalysis = deals.reduce((acc: any, deal) => {
+    const schoolWardAnalysis = filteredDeals.reduce((acc: any, deal) => {
       if (deal.schoolName && deal.ward) {
         const key = `${deal.schoolName} - ${deal.ward}`
         if (!acc[key]) {
@@ -470,14 +470,14 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
         duplicateRate: item.total > 0 ? ((item.duplicates / item.total) * 100).toFixed(1) : 0,
       }))
       .filter((item: any) => item.total >= 3) // Only show pairs with at least 3 students
-      .sort((a: any, b: any) => {
-        let aValue = a[sortField]
-        let bValue = b[sortField]
+      .sort((a, b) => {
+        let aValue: string | number = (a as any)[sortField] as string | number
+        let bValue: string | number = (b as any)[sortField] as string | number
 
         // Convert string numbers to actual numbers for numeric fields
         if (sortField === "duplicateRate") {
-          aValue = Number.parseFloat(aValue)
-          bValue = Number.parseFloat(bValue)
+          aValue = Number.parseFloat(aValue as string)
+          bValue = Number.parseFloat(bValue as string)
         }
 
         if (sortDirection === "asc") {
@@ -490,16 +490,16 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
     return {
       gradeData: Object.entries(analytics.gradeStats)
         .map(([grade, count]) => ({ name: grade, value: count }))
-        .sort((a: any, b: any) => b.value - a.value)
+        .sort((a, b: any) => b.value - a.value)
         .slice(0, 10),
       contactData: [
         { name: "Có thông tin liên hệ", value: contactCount, fill: "#82ca9d" },
-        { name: "Không có thông tin liên hệ", value: deals.length - contactCount, fill: "#ffc658" },
+        { name: "Không có thông tin liên hệ", value: filteredDeals.length - contactCount, fill: "#ffc658" },
       ],
       schoolWardDuplicateData,
       dailyDealsData,
     }
-  }, [analytics, deals, sortField, sortDirection])
+  }, [analytics, filteredDeals, sortField, sortDirection])
 
 
 
