@@ -139,6 +139,86 @@ function styleDealsSheetWithDuplicates(ws: XLSX.WorkSheet, dealsData: Deal[]) {
 
   return ws;
 }
+
+function styleTemplateSheetWithHighlights(ws: XLSX.WorkSheet, dealsData: Deal[], curriculumMap: Record<string, 'cũ' | 'mới'>) {
+  if (!ws["!ref"]) return ws;
+
+  // First apply basic styling
+  styleSheetHeaderAndBorder(ws);
+
+  const range = XLSX.utils.decode_range(ws["!ref"]);
+
+  // Apply yellow background to rows with empty "Khóa học" (course) column
+  const yellowFill = {
+    patternType: "solid",
+    fgColor: { rgb: "FFFF00" }, // yellow
+  };
+
+  // Apply red background to duplicate rows (based on email + student name combinations)
+  const redFill = {
+    patternType: "solid",
+    fgColor: { rgb: "FF0000" }, // red
+  };
+
+  // Track duplicate combinations
+  const seenCombos = new Set<string>();
+  const duplicateRowIndices: number[] = [];
+
+  dealsData.forEach((deal, index) => {
+    const rowIndex = index + 1; // +1 because header is row 0
+
+    // Check if course is empty (no curriculum mapping)
+    const schoolKey = deal.schoolName || ""
+    const wardKey = deal.ward || ""
+    const mapKey = `${schoolKey}-${wardKey}`
+    const hasCourse = curriculumMap[mapKey] !== undefined;
+
+    if (!hasCourse) {
+      // Highlight yellow for empty course
+      for (let C = range.s.c; C <= range.e.c; ++C) {
+        const cellAddress = XLSX.utils.encode_cell({ r: rowIndex, c: C });
+        const cell = ws[cellAddress];
+        if (cell) {
+          cell.s = {
+            ...(cell.s || {}),
+            fill: yellowFill
+          };
+        }
+      }
+    }
+
+    // Check for duplicates based on normalized email + student name
+    const normalizedEmail = (deal.email || "").toLowerCase().trim()
+    const studentName = deal.studentName ? normalizeTextForDuplicates(toTitleCase(deal.studentName)) : ""
+    const comboKey = `${normalizedEmail}:::${studentName}`
+
+    // Skip empty combinations
+    if (normalizedEmail || studentName) {
+      if (seenCombos.has(comboKey)) {
+        duplicateRowIndices.push(rowIndex); // Mark this row as duplicate
+      } else {
+        seenCombos.add(comboKey);
+      }
+    }
+  });
+
+  // Apply red background to duplicate rows
+  duplicateRowIndices.forEach(rowIndex => {
+    for (let C = range.s.c; C <= range.e.c; ++C) {
+      const cellAddress = XLSX.utils.encode_cell({ r: rowIndex, c: C });
+      const cell = ws[cellAddress];
+      if (cell) {
+        cell.s = {
+          ...(cell.s || {}),
+          fill: redFill
+        };
+      }
+    }
+  });
+
+  return ws;
+}
+
 export const exportToCSV = (filteredDeals: Deal[]) => {
   if (filteredDeals.length === 0) return
 
@@ -919,7 +999,7 @@ export const exportTemplate = (filteredDeals: Deal[]) => {
     return emailA.localeCompare(emailB)
   })
 
-  // Step 4: Create username counters for emails that appear multiple times
+  // Step 4: Create username counters for emails that appear multiple times (start at 0)
   const emailCounters: Record<string, number> = {}
 
   const excelData = sortedDeals.map((deal, index) => {
@@ -928,14 +1008,16 @@ export const exportTemplate = (filteredDeals: Deal[]) => {
 
     let username = email
 
-    // Only add numbering if email appears more than once
+    // Only add numbering for subsequent occurrences (2nd, 3rd, etc.)
     if (normalizedEmail && emailOccurrenceCount[normalizedEmail] > 1) {
-      if (!emailCounters[normalizedEmail]) {
-        emailCounters[normalizedEmail] = 1
-      } else {
-        emailCounters[normalizedEmail]++
+      // Increment counter (starts at undefined, becomes 1 for first occurrence, 2 for second, etc.)
+      emailCounters[normalizedEmail] = (emailCounters[normalizedEmail] || 0) + 1
+
+      // If this is not the first occurrence (counter > 1), add the number
+      if (emailCounters[normalizedEmail] > 1) {
+        username = `${email}${emailCounters[normalizedEmail]}`
       }
-      username = `${email}${emailCounters[normalizedEmail]}`
+      // If counter === 1, use email without number (first occurrence)
     }
 
     // Determine curriculum type based on school-ward combination
@@ -999,7 +1081,7 @@ export const exportTemplate = (filteredDeals: Deal[]) => {
 
   // Create workbook
   const wb = XLSX.utils.book_new()
-  styleSheetHeaderAndBorder(ws);
+  styleTemplateSheetWithHighlights(ws, sortedDeals, curriculumMap);
   XLSX.utils.book_append_sheet(wb, ws, "Template Export")
 
   // Generate and download file
