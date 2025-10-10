@@ -154,16 +154,6 @@ function styleTemplateSheetWithHighlights(ws: XLSX.WorkSheet, dealsData: Deal[],
     fgColor: { rgb: "FFFF00" }, // yellow
   };
 
-  // Apply red background to duplicate rows (based on email + student name combinations)
-  const redFill = {
-    patternType: "solid",
-    fgColor: { rgb: "FF0000" }, // red
-  };
-
-  // Track duplicate combinations
-  const seenCombos = new Set<string>();
-  const duplicateRowIndices: number[] = [];
-
   dealsData.forEach((deal, index) => {
     const rowIndex = index + 1; // +1 because header is row 0
 
@@ -171,10 +161,10 @@ function styleTemplateSheetWithHighlights(ws: XLSX.WorkSheet, dealsData: Deal[],
     const schoolKey = deal.schoolName || ""
     const wardKey = deal.ward || ""
     const mapKey = `${schoolKey}-${wardKey}`
-    const hasCourse = curriculumMap[mapKey] !== undefined;
+    const curriculumType = curriculumMap[mapKey]
 
-    if (!hasCourse) {
-      // Highlight yellow for empty course
+    if (!curriculumType) {
+      // Highlight yellow for empty/unmapped curriculum
       for (let C = range.s.c; C <= range.e.c; ++C) {
         const cellAddress = XLSX.utils.encode_cell({ r: rowIndex, c: C });
         const cell = ws[cellAddress];
@@ -184,34 +174,6 @@ function styleTemplateSheetWithHighlights(ws: XLSX.WorkSheet, dealsData: Deal[],
             fill: yellowFill
           };
         }
-      }
-    }
-
-    // Check for duplicates based on normalized email + student name
-    const normalizedEmail = (deal.email || "").toLowerCase().trim()
-    const studentName = deal.studentName ? normalizeTextForDuplicates(toTitleCase(deal.studentName)) : ""
-    const comboKey = `${normalizedEmail}:::${studentName}`
-
-    // Skip empty combinations
-    if (normalizedEmail || studentName) {
-      if (seenCombos.has(comboKey)) {
-        duplicateRowIndices.push(rowIndex); // Mark this row as duplicate
-      } else {
-        seenCombos.add(comboKey);
-      }
-    }
-  });
-
-  // Apply red background to duplicate rows
-  duplicateRowIndices.forEach(rowIndex => {
-    for (let C = range.s.c; C <= range.e.c; ++C) {
-      const cellAddress = XLSX.utils.encode_cell({ r: rowIndex, c: C });
-      const cell = ws[cellAddress];
-      if (cell) {
-        cell.s = {
-          ...(cell.s || {}),
-          fill: redFill
-        };
       }
     }
   });
@@ -975,8 +937,35 @@ export const exportTemplate = (filteredDeals: Deal[]) => {
     'Giồng Ông Tố-Bình Trưng': 'mới'
   }
 
-  // Step 1: Include all deals as they are (no deduplication)
-  const uniqueDeals = filteredDeals
+  // Step 1: Remove ALL entries that have duplicates based on email + student name combination
+  const comboCounts: Record<string, number> = {}
+  const comboDeals: Record<string, Deal[]> = {}
+
+  // First pass: count occurrences and group deals
+  for (const deal of filteredDeals) {
+    const normalizedEmail = (deal.email || "").toLowerCase().trim()
+    const studentName = deal.studentName ? normalizeTextForDuplicates(toTitleCase(deal.studentName)) : ""
+
+    // Skip if both email and student name are empty
+    if (!normalizedEmail && !studentName) continue
+
+    // Create unique key from email + student name combination
+    const comboKey = `${normalizedEmail}:::${studentName}`
+
+    comboCounts[comboKey] = (comboCounts[comboKey] || 0) + 1
+    if (!comboDeals[comboKey]) comboDeals[comboKey] = []
+    comboDeals[comboKey].push(deal)
+  }
+
+  // Second pass: only keep deals that have unique combinations (no duplicates)
+  const uniqueDeals = []
+  for (const [comboKey, count] of Object.entries(comboCounts)) {
+    if (count === 1) {
+      // Only include if this combination appears exactly once
+      uniqueDeals.push(...comboDeals[comboKey])
+    }
+    // Skip all combinations that appear more than once (duplicates)
+  }
 
   // Step 2: Count email occurrences to determine which ones need numbering
   const emailOccurrenceCount: Record<string, number> = {}
