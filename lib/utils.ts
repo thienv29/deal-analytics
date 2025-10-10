@@ -30,3 +30,14 @@ export function normalizeVietnamPhone(raw?: string): string {
   }
   return phone;
 }
+export function removeVietnameseTones(str: string): string {
+  return str
+    .normalize("NFD") // Tách ký tự có dấu thành ký tự gốc + dấu
+    .replace(/[\u0300-\u036f]/g, "") // Loại bỏ toàn bộ dấu
+    .replace(/đ/g, "d") // Chuyển đ -> d
+    .replace(/Đ/g, "D") // Chuyển Đ -> D
+    .replace(/[^a-zA-Z0-9\s-]/g, "") // Bỏ ký tự đặc biệt
+    .replace(/\s+/g, "-") // ⚡ Thay tất cả khoảng trắng bằng dấu gạch ngang
+    .replace(/-+/g, "-") // Gộp nhiều dấu gạch ngang liên tiếp
+    .trim();
+}

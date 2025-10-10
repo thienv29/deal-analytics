@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils"
 import { format } from "date-fns"
 import * as EmailValidator from 'email-validator';
 import {toTitleCase, normalizeVietnamPhone} from "@/lib/utils";
-import { exportToCSV, exportToJSON, exportToExcel, exportDuplicateDataToExcel, exportSummaryAndDuplicateToExcel, exportMultiSheetExcel, exportMultiFormat } from "@/lib/export-utils"
+import { exportToCSV, exportToJSON, exportToExcel, exportDuplicateDataToExcel, exportSummaryAndDuplicateToExcel, exportMultiSheetExcel, exportMultiFormat, exportTemplate } from "@/lib/export-utils"
 import {
   RefreshCw,
   X,
@@ -502,7 +502,6 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
   }, [analytics, filteredDeals, sortField, sortDirection])
 
 
-
   const handleSort = (field: typeof sortField) => {
     if (sortField === field) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc")
@@ -894,6 +893,18 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
                 <Download className="h-3 w-3" />
                 Xuất
               </Button>
+
+              {filteredDeals.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => exportTemplate(filteredDeals)}
+                  className="gap-2 bg-orange-500 hover:bg-orange-600 text-white h-8 px-3"
+                >
+                  <Download className="h-3 w-3" />
+                  Template Excel
+                </Button>
+              )}
             </div>
           )}
           <Button variant="outline" onClick={clearData}>

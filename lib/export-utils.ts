@@ -1,6 +1,6 @@
 import { Deal } from "@/components/deals-analytics"
 import * as XLSX from 'sheetjs-style'
-import {toTitleCase, normalizeVietnamPhone} from "./utils"
+import {toTitleCase, normalizeVietnamPhone, removeVietnameseTones} from "./utils"
 
 function styleSheetHeaderAndBorder(ws: XLSX.WorkSheet) {
   if (!ws["!ref"]) return ws; // không có data thì thôi
@@ -853,6 +853,122 @@ const exportArrayToCSV = (data: any[], filename: string) => {
   document.body.removeChild(link)
 }
 
+export const exportTemplate = (filteredDeals: Deal[]) => {
+  if (filteredDeals.length === 0) return
+
+  // Step 1: Remove duplicates based on email and student name combination
+  const seenCombos = new Set<string>()
+  const uniqueDeals = []
+
+  for (const deal of filteredDeals) {
+    const normalizedEmail = (deal.email || "").toLowerCase().trim()
+    const studentName = deal.studentName ? normalizeTextForDuplicates(toTitleCase(deal.studentName)) : ""
+
+    // Skip if both email and student name are empty
+    if (!normalizedEmail && !studentName) continue
+
+    // Create unique key from email + student name combination
+    const comboKey = `${normalizedEmail}:::${studentName}`
+
+    if (!seenCombos.has(comboKey)) {
+      seenCombos.add(comboKey)
+      uniqueDeals.push(deal)
+    }
+    // Skip duplicates (deals with same email + student name combination)
+  }
+
+  // Step 2: Count email occurrences to determine which ones need numbering
+  const emailOccurrenceCount: Record<string, number> = {}
+  uniqueDeals.forEach(deal => {
+    const normalizedEmail = (deal.email || "").toLowerCase().trim()
+    if (normalizedEmail) {
+      emailOccurrenceCount[normalizedEmail] = (emailOccurrenceCount[normalizedEmail] || 0) + 1
+    }
+  })
+
+  // Step 3: Sort unique deals by email
+  const sortedDeals = uniqueDeals.sort((a, b) => {
+    const emailA = (a.email || "").toLowerCase().trim()
+    const emailB = (b.email || "").toLowerCase().trim()
+
+    if (!emailA && !emailB) return 0
+    if (!emailA) return 1  // Empty emails come after
+    if (!emailB) return -1 // Empty emails come after
+
+    return emailA.localeCompare(emailB)
+  })
+
+  // Step 4: Create username counters for emails that appear multiple times
+  const emailCounters: Record<string, number> = {}
+
+  const excelData = sortedDeals.map((deal, index) => {
+    const email = deal.email || ""
+    const normalizedEmail = email.toLowerCase().trim()
+
+    let username = email
+
+    // Only add numbering if email appears more than once
+    if (normalizedEmail && emailOccurrenceCount[normalizedEmail] > 1) {
+      if (!emailCounters[normalizedEmail]) {
+        emailCounters[normalizedEmail] = 1
+      } else {
+        emailCounters[normalizedEmail]++
+      }
+      username = `${email}${emailCounters[normalizedEmail]}`
+    }
+
+    return {
+      "STT": "", // Leave STT column empty as requested
+      "id": "",
+      "Họ tên bé": toTitleCase(deal.studentName) || "",
+      "Tên đăng nhập": username,
+      "Email": deal.email || "",
+      "Số điện thoại": normalizeVietnamPhone(deal.phone) || "",
+      "Mật khẩu": "iclc2025", // Empty by default - passwords not available
+      "Giới tính (1 - nam / 2- nữ / 3 khác)": "3", // Default empty - gender not in Deal model
+      "Kích hoạt": deal.isDisabled === "1" ? "0" : "1", // 1 = activated (not disabled), 0 = deactivated (disabled)
+      "Cấm tài khoản": deal.isDisabled === "1" ? "1" : "0", // 1 = banned (disabled), 0 = not banned (active)
+      "Tên người liên hệ": toTitleCase(deal.parentOfStudentName) || "",
+      "Trường": deal.schoolName || "",
+      "Lớp": deal.className || "",
+      "Nhóm": "FTDP, tih-" + removeVietnameseTones(deal.schoolName+ ' ' + deal.ward), // Default empty - no group field in Deal model
+      "Khóa học": "", // Default empty - no course field in Deal model
+    }
+  }) as Record<string, any>[]
+
+  // Create worksheet
+  const ws = XLSX.utils.json_to_sheet(excelData)
+
+  // Set column widths
+  const colWidths = [
+    { wch: 6 }, // STT
+    { wch: 15 }, // id
+    { wch: 25 }, // Họ tên bé
+    { wch: 30 }, // Tên đăng nhập
+    { wch: 30 }, // Email
+    { wch: 15 }, // Số điện thoại
+    { wch: 15 }, // Mật khẩu
+    { wch: 30 }, // Giới tính
+    { wch: 10 }, // Kích hoạt
+    { wch: 15 }, // Cấm tài khoản
+    { wch: 25 }, // Tên người liên hệ
+    { wch: 25 }, // Trường
+    { wch: 15 }, // Lớp
+    { wch: 15 }, // Nhóm
+    { wch: 15 }, // Khóa học
+  ]
+  ws['!cols'] = colWidths
+
+  // Create workbook
+  const wb = XLSX.utils.book_new()
+  styleSheetHeaderAndBorder(ws);
+  XLSX.utils.book_append_sheet(wb, ws, "Template Export")
+
+  // Generate and download file
+  const fileName = `template-export-${new Date().toISOString().split("T")[0]}.xlsx`
+  XLSX.writeFile(wb, fileName)
+}
+
 export const exportMultiSheetExcel = (
   options: {
     includeSummary?: boolean
@@ -941,7 +1057,7 @@ export const exportMultiSheetExcel = (
 
     const dealsExcelData = sortedDeals.map((deal) => ({
       "ID": deal.ID || "",
-      "Tên học sinh": toTitleCase(toTitleCase(deal.studentName)) || "",
+      "Tên học sinh": toTitleCase(deal.studentName) || "",
       "Tên phụ huynh": toTitleCase(deal.parentOfStudentName) || "",
       "Khối": deal.grade || "",
       "Lớp": deal.className || "",
