@@ -856,26 +856,47 @@ const exportArrayToCSV = (data: any[], filename: string) => {
 export const exportTemplate = (filteredDeals: Deal[]) => {
   if (filteredDeals.length === 0) return
 
-  // Step 1: Remove duplicates based on email and student name combination
-  const seenCombos = new Set<string>()
-  const uniqueDeals = []
-
-  for (const deal of filteredDeals) {
-    const normalizedEmail = (deal.email || "").toLowerCase().trim()
-    const studentName = deal.studentName ? normalizeTextForDuplicates(toTitleCase(deal.studentName)) : ""
-
-    // Skip if both email and student name are empty
-    if (!normalizedEmail && !studentName) continue
-
-    // Create unique key from email + student name combination
-    const comboKey = `${normalizedEmail}:::${studentName}`
-
-    if (!seenCombos.has(comboKey)) {
-      seenCombos.add(comboKey)
-      uniqueDeals.push(deal)
-    }
-    // Skip duplicates (deals with same email + student name combination)
+  // Curriculum mapping: school-ward -> "cũ" or "mới"
+  const curriculumMap: Record<string, 'cũ' | 'mới'> = {
+    'Hòa Bình-Sài Gòn': 'cũ',
+    'Lê Ngọc Hân-Bến Thành': 'cũ',
+    'Đinh Tiên Hoàng-Tân Định': 'mới',
+    'Nguyễn Thái Bình-Bến Thành': 'mới',
+    'Nguyễn Sơn Hà-Bàn Cờ': 'mới',
+    'Nguyễn Thái Bình-Xóm Chiếu': 'cũ',
+    'Đống Đa-Khánh Hội': 'cũ',
+    'Phú Định-Bình Phú': 'cũ',
+    'Chi Lăng-Thông Tây Hội': 'cũ',
+    'An Hội-Thông Tây Hội': 'cũ',
+    'Nguyễn Viết Xuân-An Nhơn': 'cũ',
+    'Lê Quý Đôn-An Hội Tây': 'mới',
+    'Hoàng Văn Thụ-An Nhơn': 'cũ',
+    'Nguyễn Thị Minh Khai-Thông Tây Hội': 'cũ',
+    'Phạm Ngũ Lão-Hạnh Thông': 'cũ',
+    'Lê Thị Hồng Gấm-An Hội Tây': 'mới',
+    'Kim Đồng-Gò Vấp': 'mới',
+    'Lê Hoàn-An Hội Đông': 'mới',
+    'Võ Thị Sáu-An Hội Đông': 'cũ',
+    'Hanh Thông-Hạnh Thông': 'mới',
+    'Đặng Thùy Trâm-An Hội Tây': 'mới',
+    'Nguyễn Thượng Hiền-Hạnh Thông': 'mới',
+    'Phan Chu Trinh-An Hội Đông': 'mới',
+    'Lê Đức Thọ-An Hội Đông': 'cũ',
+    'Hoàng Văn Thụ-Tân Sơn Nhất': 'mới',
+    'Chi Lăng-Tân Hòa': 'cũ',
+    'Lê Văn Sĩ-Tân Sơn Hòa': 'cũ',
+    'Bành Văn Trân-Tân Sơn Nhất': 'mới',
+    'Lê Thị Hồng Gấm-Bảy Hiền': 'cũ',
+    'Trần Quốc Tuấn-Bảy Hiền': 'cũ',
+    'Trường Thạnh-Long Phước': 'mới',
+    'Linh Chiểu-Thủ Đức': 'cũ',
+    'Đặng Văn Bất-Hiệp Bình': 'mới',
+    'Nguyễn Thị Tư-An Khánh': 'cũ',
+    'Giồng Ông Tố-Bình Trưng': 'mới'
   }
+
+  // Step 1: Include all deals as they are (no deduplication)
+  const uniqueDeals = filteredDeals
 
   // Step 2: Count email occurrences to determine which ones need numbering
   const emailOccurrenceCount: Record<string, number> = {}
@@ -917,6 +938,23 @@ export const exportTemplate = (filteredDeals: Deal[]) => {
       username = `${email}${emailCounters[normalizedEmail]}`
     }
 
+    // Determine curriculum type based on school-ward combination
+    const schoolKey = deal.schoolName || ""
+    const wardKey = deal.ward?.split('Phường ')[1] || ""
+    const mapKey = `${schoolKey}-${wardKey}`
+    const curriculumType = curriculumMap[mapKey] // Leave empty if not found
+
+    // Get grade number (assume grade is like "10", "11", "12" or "10 A", "11 B" etc.)
+    let gradeNumber = deal.grade?.split(" ")[1]
+    // Generate course name based on curriculum type
+    let courseName = ""
+    if (curriculumType === 'cũ') {
+      courseName = `Tiếng Anh Toán - Khoa học thực nghiệm (khối ${gradeNumber})`
+    } else if (curriculumType === 'mới') {
+      courseName = `Tiếng Anh Toán - Khoa học thực nghiệm (k${gradeNumber})`
+    }
+    // If curriculumType is undefined (not mapped), courseName remains empty string
+
     return {
       "STT": "", // Leave STT column empty as requested
       "id": "",
@@ -932,7 +970,7 @@ export const exportTemplate = (filteredDeals: Deal[]) => {
       "Trường": deal.schoolName || "",
       "Lớp": deal.className || "",
       "Nhóm": "FTDP, tih-" + removeVietnameseTones(deal.schoolName+ ' ' + deal.ward), // Default empty - no group field in Deal model
-      "Khóa học": "", // Default empty - no course field in Deal model
+      "Khóa học": courseName,
     }
   }) as Record<string, any>[]
 
