@@ -83,7 +83,7 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
   const [schoolFilter, setSchoolFilter] = useState("")
   const [wardFilter, setWardFilter] = useState("")
   const [schoolWardPairFilter, setSchoolWardPairFilter] = useState("")
-  const [duplicateEmailFilter, setDuplicateEmailFilter] = useState(false)
+  const [duplicateEmailFilter, setDuplicateEmailFilter] = useState<'all' | 'duplicate' | 'unique'>('all')
   const [emailValidityFilter, setEmailValidityFilter] = useState<'all' | 'valid' | 'invalid'>('all')
   const [schoolValidityFilter, setSchoolValidityFilter] = useState<'all' | 'valid' | 'invalid_empty'>('all')
   const [startDateFilter, setStartDateFilter] = useState<Date | undefined>()
@@ -164,8 +164,8 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
       }
     }
 
-    if (duplicateEmailFilter) {
-      const emailCounts = deals.reduce((acc: Record<string, number>, deal) => {
+    if (duplicateEmailFilter === 'duplicate') {
+      const emailCounts = filtered.reduce((acc: Record<string, number>, deal) => {
         const email = deal.email?.trim().toLowerCase()
         if (email) {
           acc[email] = (acc[email] || 0) + 1
@@ -176,6 +176,19 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
       filtered = filtered.filter((deal) => {
         const email = deal.email?.trim().toLowerCase()
         return email && emailCounts[email] > 1
+      })
+    } else if (duplicateEmailFilter === 'unique') {
+      const emailCounts = filtered.reduce((acc: Record<string, number>, deal) => {
+        const email = deal.email?.trim().toLowerCase()
+        if (email) {
+          acc[email] = (acc[email] || 0) + 1
+        }
+        return acc
+      }, {})
+
+      filtered = filtered.filter((deal) => {
+        const email = deal.email?.trim().toLowerCase()
+        return email && emailCounts[email] === 1
       })
     }
 
@@ -307,7 +320,7 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
     setSchoolFilter("")
     setWardFilter("")
     setSchoolWardPairFilter("")
-    setDuplicateEmailFilter(false)
+    setDuplicateEmailFilter('all')
     setEmailValidityFilter('all')
     setSchoolValidityFilter('all')
     setStartDateFilter(undefined)
@@ -1271,18 +1284,16 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
 
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Lọc theo email</label>
-                    <div className="flex items-center gap-2 h-10 px-3 border rounded-md">
-                      <input
-                        type="checkbox"
-                        id="duplicateEmail"
-                        checked={duplicateEmailFilter}
-                        onChange={(e) => setDuplicateEmailFilter(e.target.checked)}
-                        className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
-                      />
-                      <label htmlFor="duplicateEmail" className="text-sm cursor-pointer">
-                        Chỉ hiện email bị trùng
-                      </label>
-                    </div>
+                    <Select value={duplicateEmailFilter} onValueChange={(value) => setDuplicateEmailFilter(value as 'all' | 'duplicate' | 'unique')}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Hiện tất cả email</SelectItem>
+                        <SelectItem value="duplicate">Chỉ hiện email bị trùng</SelectItem>
+                        <SelectItem value="unique">Chỉ hiện email duy nhất</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div className="space-y-2">
@@ -1368,7 +1379,7 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
                     schoolFilter ||
                     wardFilter ||
                     schoolWardPairFilter ||
-                    duplicateEmailFilter ||
+                    duplicateEmailFilter !== 'all' ||
                     emailValidityFilter !== 'all' ||
                     schoolValidityFilter !== 'all' ||
                     startDateFilter ||
@@ -1395,9 +1406,9 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
                             {wardFilter}
                           </span>
                         )}
-                        {duplicateEmailFilter && (
+                        {duplicateEmailFilter !== 'all' && (
                           <span className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-xs font-medium">
-                            Email trùng lặp
+                            {duplicateEmailFilter === 'duplicate' ? 'Email trùng lặp' : 'Email duy nhất'}
                           </span>
                         )}
                         {emailValidityFilter === 'valid' && (
