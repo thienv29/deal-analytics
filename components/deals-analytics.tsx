@@ -676,18 +676,78 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
 
       console.log(`📋 Đang xử lý cặp ${i + 1}/${pairsToProcess.length}: ${pair}`)
 
-      // Reset filter first to ensure clean state
-      setSchoolWardPairFilter("all")
-      await new Promise(resolve => setTimeout(resolve, 200))
+      // Apply all current filters manually (except schoolWardPairFilter) + specific school-ward pair
+      let filteredForPair = deals
 
-      // Set the specific pair filter
-      setSchoolWardPairFilter(pair)
-      await new Promise(resolve => setTimeout(resolve, 800))
+      if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase()
+        filteredForPair = filteredForPair.filter(
+          (deal) =>
+            (toTitleCase(deal.studentName) || "").toLowerCase().includes(query) ||
+            (toTitleCase(deal.parentOfStudentName) || "").toLowerCase().includes(query) ||
+            (deal.email || "").toLowerCase().includes(query) ||
+            (normalizeVietnamPhone(deal.phone) || "").toLowerCase().includes(query),
+        )
+      }
 
-      // Manually filter the deals for this specific pair to ensure we get the right data
-      let filteredForPair = deals.filter((deal) => deal.schoolName === school && deal.ward === ward)
+      if (gradeFilter && gradeFilter !== "all") {
+        filteredForPair = filteredForPair.filter((deal) => deal.grade === gradeFilter)
+      }
 
-      // Apply date filtering if date filters are active
+      // Apply specific school-ward pair filter (instead of schoolWardPairFilter)
+      filteredForPair = filteredForPair.filter((deal) => deal.schoolName === school && deal.ward === ward)
+
+      if (duplicateEmailFilter === 'duplicate') {
+        const emailCounts = filteredForPair.reduce((acc: Record<string, number>, deal) => {
+          const email = deal.email?.trim().toLowerCase()
+          if (email) {
+            acc[email] = (acc[email] || 0) + 1
+          }
+          return acc
+        }, {})
+
+        filteredForPair = filteredForPair.filter((deal) => {
+          const email = deal.email?.trim().toLowerCase()
+          return email && emailCounts[email] > 1
+        })
+      } else if (duplicateEmailFilter === 'unique') {
+        const emailCounts = filteredForPair.reduce((acc: Record<string, number>, deal) => {
+          const email = deal.email?.trim().toLowerCase()
+          if (email) {
+            acc[email] = (acc[email] || 0) + 1
+          }
+          return acc
+        }, {})
+
+        filteredForPair = filteredForPair.filter((deal) => {
+          const email = deal.email?.trim().toLowerCase()
+          return email && emailCounts[email] === 1
+        })
+      }
+
+      if (emailValidityFilter === 'valid') {
+        filteredForPair = filteredForPair.filter((deal) => {
+          const email = deal.email?.trim()
+          return email && isValidEmail(email)
+        })
+      } else if (emailValidityFilter === 'invalid') {
+        filteredForPair = filteredForPair.filter((deal) => {
+          const email = deal.email?.trim()
+          return email && !isValidEmail(email)
+        })
+      }
+
+      if (schoolValidityFilter === 'valid') {
+        filteredForPair = filteredForPair.filter((deal) => {
+          return !!deal.schoolName && !!deal.ward
+        })
+      } else if (schoolValidityFilter === 'invalid_empty') {
+        filteredForPair = filteredForPair.filter((deal) => {
+          return !deal.schoolName || !deal.ward
+        })
+      }
+
+      // Date filtering
       if (startDateFilter || endDateFilter) {
         filteredForPair = filteredForPair.filter((deal) => {
           if (!deal.DATE_CREATE) return false
@@ -717,10 +777,10 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
         })
       }
 
-      console.log(`🔍 Dữ liệu sau khi lọc thủ công: ${filteredForPair.length} deals`)
+      console.log(`🔍 Dữ liệu sau khi lọc đầy đủ: ${filteredForPair.length} deals`)
 
       if (filteredForPair.length === 0) {
-        console.warn(`⚠️ Không có dữ liệu cho cặp ${pair}, bỏ qua`)
+        console.warn(`⚠️ Không có dữ liệu cho cặp ${pair} sau khi áp dụng bộ lọc, bỏ qua`)
         continue
       }
 
@@ -734,18 +794,95 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
       const customFilename = `${sanitizedSchool}_${sanitizedWard}_${filteredForPair.length}deal_${exportDate}`
 
       try {
-        // Filter duplicate data for this specific pair
-        const pairDuplicateData = duplicateData.map(group => ({
-          ...group,
-          deals: group.deals.filter(deal => deal.schoolName === school && deal.ward === ward)
-        })).filter(group => group.deals.length > 0)
+        // Filter duplicate data for this specific pair - apply same filters to get matching duplicates
+        const pairDuplicateData = duplicateData
+          .map(group => ({
+            ...group,
+            deals: group.deals.filter(deal => {
+              // Check if deal passes all filters for this pair
+              let passesFilters = true
 
-        // Filter summary data for this specific pair
+              if (searchQuery.trim()) {
+                const query = searchQuery.toLowerCase()
+                passesFilters = passesFilters && (
+                  (toTitleCase(deal.studentName) || "").toLowerCase().includes(query) ||
+                  (toTitleCase(deal.parentOfStudentName) || "").toLowerCase().includes(query) ||
+                  (deal.email || "").toLowerCase().includes(query) ||
+                  (normalizeVietnamPhone(deal.phone) || "").toLowerCase().includes(query)
+                )
+              }
+
+              if (gradeFilter && gradeFilter !== "all") {
+                passesFilters = passesFilters && deal.grade === gradeFilter
+              }
+
+              passesFilters = passesFilters && deal.schoolName === school && deal.ward === ward
+
+              if (duplicateEmailFilter === 'duplicate') {
+                const email = deal.email?.trim().toLowerCase()
+                const emailCounts = group.deals.reduce((acc: Record<string, number>, gdeal) => {
+                  const gemail = gdeal.email?.trim().toLowerCase()
+                  if (gemail) acc[gemail] = (acc[gemail] || 0) + 1
+                  return acc
+                }, {})
+                passesFilters = passesFilters && email && emailCounts[email] > 1
+              } else if (duplicateEmailFilter === 'unique') {
+                const email = deal.email?.trim().toLowerCase()
+                const emailCounts = group.deals.reduce((acc: Record<string, number>, gdeal) => {
+                  const gemail = gdeal.email?.trim().toLowerCase()
+                  if (gemail) acc[gemail] = (acc[gemail] || 0) + 1
+                  return acc
+                }, {})
+                passesFilters = passesFilters && email && emailCounts[email] === 1
+              }
+
+              if (emailValidityFilter === 'valid') {
+                const email = deal.email?.trim()
+                passesFilters = passesFilters && email && isValidEmail(email)
+              } else if (emailValidityFilter === 'invalid') {
+                const email = deal.email?.trim()
+                passesFilters = passesFilters && email && !isValidEmail(email)
+              }
+
+              if (schoolValidityFilter === 'valid') {
+                passesFilters = passesFilters && !!deal.schoolName && !!deal.ward
+              } else if (schoolValidityFilter === 'invalid_empty') {
+                passesFilters = passesFilters && (!deal.schoolName || !deal.ward)
+              }
+
+              if (startDateFilter || endDateFilter) {
+                if (!deal.DATE_CREATE) passesFilters = false
+                else {
+                  try {
+                    const dealDate = new Date(deal.DATE_CREATE)
+                    if (isNaN(dealDate.getTime())) passesFilters = false
+                    else {
+                      if (startDateFilter) {
+                        const start = new Date(startDateFilter)
+                        start.setHours(0, 0, 0, 0)
+                        if (dealDate < start) passesFilters = false
+                      }
+                      if (endDateFilter) {
+                        const end = new Date(endDateFilter)
+                        end.setHours(23, 59, 59, 999)
+                        if (dealDate > end) passesFilters = false
+                      }
+                    }
+                  } catch (error) {
+                    passesFilters = false
+                  }
+                }
+              }
+
+              return passesFilters
+            })
+          }))
+          .filter(group => group.deals.length > 0)
+
+        // Filter summary data for this specific pair (summary data is always filtered by school-ward, so it should be accurate)
         const pairSummaryData = chartData?.schoolWardDuplicateData?.filter((item: any) =>
           item.school === school && item.ward === ward
         ) || []
-
-
 
         exportMultiFormat({
           format: exportFormat,
@@ -753,7 +890,7 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
           includeDeals: exportIncludeDeals,
           includeDuplicates: exportIncludeDuplicates,
           summaryData: pairSummaryData,
-          dealsData: filteredForPair, // Use manually filtered data instead of state
+          dealsData: filteredForPair,
           duplicateData: pairDuplicateData,
           correctDataSelections,
           duplicateExportGrouped,
@@ -771,11 +908,8 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
       }
     }
 
-    // Reset filter to all
-    setSchoolWardPairFilter("all")
-
     console.log(`🎉 Hoàn thành automation! Đã export ${pairsToProcess.length} files`)
-    alert(`✅ Hoàn thành! Đã export ${pairsToProcess.length} file Excel.\n\nMỗi file chứa dữ liệu của 1 cặp Trường-Phường.\nKiểm tra thư mục Downloads!`)
+    alert(`✅ Hoàn thành! Đã export ${pairsToProcess.length} file Excel.\n\nMỗi file chứa dữ liệu của 1 cặp Trường-Phường với đầy đủ bộ lọc.\nKiểm tra thư mục Downloads!`)
   }
 
 
@@ -1609,7 +1743,7 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
                       <div className="flex items-center gap-2 bg-white border rounded-md px-2 py-1">
                         <span className="text-xs font-medium text-gray-700">Hiển thị:</span>
                         <Select
-                          value={duplicateDisplayGrouped.toString()}
+                          value={duplicateDisplayGrouped ? "true" : "false"}
                           onValueChange={(value) => setDuplicateDisplayGrouped(value === "true")}
                         >
                           <SelectTrigger className="w-32 h-7 text-xs">
@@ -1625,7 +1759,7 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
                       <div className="flex items-center gap-2 bg-white border rounded-md px-2 py-1">
                         <span className="text-xs font-medium text-gray-700">Xuất:</span>
                         <Select
-                          value={duplicateExportGrouped.toString()}
+                          value={duplicateExportGrouped ? "true" : "false"}
                           onValueChange={(value) => setDuplicateExportGrouped(value === "true")}
                         >
                           <SelectTrigger className="w-36 h-7 text-xs">
