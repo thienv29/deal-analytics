@@ -151,7 +151,7 @@ function styleTemplateSheetWithHighlights(ws: XLSX.WorkSheet, dealsData: Deal[],
   // Apply yellow background to rows with empty "Khóa học" (course) column
   const yellowFill = {
     patternType: "solid",
-    fgColor: { rgb: "FFFF00" }, // yellow
+    fgColor: { rgb: "FFFFFF" }, // yellow
   };
 
   dealsData.forEach((deal, index) => {
@@ -1040,7 +1040,7 @@ export const exportTemplate = (filteredDeals: Deal[]) => {
       "Tên người liên hệ": toTitleCase(deal.parentOfStudentName) || "",
       "Trường": deal.schoolName || "",
       "Lớp": deal.className || "",
-      "Nhóm": "FTDP, tih-" + removeVietnameseTones(deal.schoolName+ ' ' + deal.ward), // Default empty - no group field in Deal model
+      "Nhóm": "FTDP, tih-" + removeVietnameseTones(deal.schoolName+ ' ' + deal.ward) + ", TKTC", // Default empty - no group field in Deal model
       "Khóa học": courseName,
     }
   }) as Record<string, any>[]
