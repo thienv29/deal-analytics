@@ -1038,7 +1038,7 @@ export const exportTemplate = (filteredDeals: Deal[]) => {
       "Kích hoạt": deal.isDisabled === "1" ? "0" : "1", // 1 = activated (not disabled), 0 = deactivated (disabled)
       "Cấm tài khoản": deal.isDisabled === "1" ? "1" : "0", // 1 = banned (disabled), 0 = not banned (active)
       "Tên người liên hệ": toTitleCase(deal.parentOfStudentName) || "",
-      "Trường": deal.schoolName || "",
+      "Trường": (deal.schoolName || "") + " - " + (deal.ward || ""),
       "Lớp": deal.className || "",
       "Nhóm": "FTDP, tih-" + removeVietnameseTones(deal.schoolName+ ' ' + deal.ward) + ", TKTC", // Default empty - no group field in Deal model
       "Khóa học": courseName,
