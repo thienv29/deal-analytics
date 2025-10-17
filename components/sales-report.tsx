@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, ComposedChart, Line } from 'recharts'
 
 
 interface SalesReport {
@@ -166,7 +166,7 @@ export function SalesReport() {
             </Card>
           </div>
 
-          <div className="grid gap-6 md:grid-cols-2">
+          <div className="grid gap-6 md:grid-cols-3">
             <Card>
               <CardHeader>
                 <CardTitle>Tình Trạng Đăng Nhập</CardTitle>
@@ -199,7 +199,7 @@ export function SalesReport() {
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={data.data.slice(0, 10)}>
+                  <BarChart data={data.data.slice(0, 5)}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis
                       dataKey="school"
@@ -212,6 +212,32 @@ export function SalesReport() {
                     <Tooltip labelFormatter={(label) => label} />
                     <Bar dataKey="issued" fill="#3b82f6" />
                   </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Chi Tiết Theo Trường</CardTitle>
+                <CardDescription>So sánh tài khoản đã cấp vs đã đăng nhập</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <ComposedChart data={data.data.slice(0, 5)}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis
+                      dataKey="school"
+                      angle={-45}
+                      textAnchor="end"
+                      height={80}
+                      interval={0}
+                    />
+                    <YAxis />
+                    <Tooltip />
+                    <Bar dataKey="issued" stackId="a" fill="#3b82f6" name="Đã Cấp" />
+                    <Bar dataKey="loggedIn" stackId="b" fill="#10b981" name="Đã Đăng Nhập" />
+                    <Line type="monotone" dataKey="unprocessed" stroke="#ef4444" strokeWidth={2} name="Chưa Xử Lý" />
+                  </ComposedChart>
                 </ResponsiveContainer>
               </CardContent>
             </Card>
