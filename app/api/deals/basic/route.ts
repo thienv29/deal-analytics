@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 const fieldMap = {
   UF_CRM_6178C6D2EDA26: "schoolName",
   UF_CRM_1742537683: "schoolType",
