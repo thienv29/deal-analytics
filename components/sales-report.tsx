@@ -3,11 +3,12 @@
 import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Badge } from '@/components/ui/badge'
+
 
 interface SalesReport {
   school: string
   issued: number
+  loggedIn: number
   totalRequests: number
   unprocessed: number
 }
@@ -18,6 +19,7 @@ interface ReportData {
   summary: {
     totalSchools: number
     totalAccounts: number
+    totalLoggedIn: number
   }
 }
 
@@ -65,6 +67,7 @@ export function SalesReport() {
 
   const totalAccounts = data.summary.totalAccounts
   const totalSchools = data.summary.totalSchools
+  const totalLoggedIn = data.summary.totalLoggedIn
 
   return (
     <div className="space-y-6">
@@ -73,7 +76,7 @@ export function SalesReport() {
         <p className="text-gray-600 mt-1">Thống kê số lượng tài khoản đã cấp theo trường học</p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Tổng Trường Học</CardTitle>
@@ -96,6 +99,17 @@ export function SalesReport() {
             </p>
           </CardContent>
         </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Tổng Tài Khoản Đã Đăng Nhập</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalLoggedIn}</div>
+            <p className="text-xs text-muted-foreground">
+              Tổng số tài khoản đã đăng nhập
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
       <Card>
@@ -111,8 +125,9 @@ export function SalesReport() {
               <TableRow>
                 <TableHead>Tên Trường</TableHead>
                 <TableHead className="text-right">Tài Khoản Đã Cấp</TableHead>
+                <TableHead className="text-right">Đã Đăng Nhập</TableHead>
                 <TableHead className="text-right">Tổng Yêu Cầu</TableHead>
-                <TableHead className="text-right">Tình Trạng</TableHead>
+                <TableHead className="text-right">Chưa Xử Lý</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -120,12 +135,9 @@ export function SalesReport() {
                 <TableRow key={index}>
                   <TableCell className="font-medium">{item.school}</TableCell>
                   <TableCell className="text-right">{item.issued}</TableCell>
+                  <TableCell className="text-right">{item.loggedIn}</TableCell>
                   <TableCell className="text-right">{item.totalRequests}</TableCell>
-                  <TableCell className="text-right">
-                    <Badge variant="default">
-                      Đã Cấp: {item.issued}, Chưa Xử Lý: {item.unprocessed}
-                    </Badge>
-                  </TableCell>
+                  <TableCell className="text-right">{item.unprocessed}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

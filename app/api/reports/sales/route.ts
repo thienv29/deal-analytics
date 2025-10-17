@@ -10,11 +10,21 @@ export async function GET() {
       'SELECT school, COUNT(*) as issued FROM users WHERE school IS NOT NULL GROUP BY school ORDER BY school'
     )
 
+    // Query school and count of logged in accounts (assuming there's a condition for logged in)
+    const [loginsResult] = await connection.execute(
+      'SELECT school, COUNT(*) as loggedIn FROM users WHERE school IS NOT NULL AND last_login_ip IS NOT NULL GROUP BY school ORDER BY school'
+    )
+
     await connection.end()
 
     const schoolAccounts = new Map()
     ;(accountsResult as any[]).forEach((row: any) => {
       schoolAccounts.set(row.school, row.issued)
+    })
+
+    const schoolLogins = new Map()
+    ;(loginsResult as any[]).forEach((row: any) => {
+      schoolLogins.set(row.school, row.loggedIn)
     })
 
     // Now fetch deals data from the basic API to correlate
@@ -46,11 +56,13 @@ export async function GET() {
     const report = Array.from(schoolAccounts.entries()).map(([school, issued]: [string, number]) => ({
       school: school,
       issued: issued,
+      loggedIn: schoolLogins.get(school) || 0,
       totalRequests: schoolRequests[school] || 0,
       unprocessed: Math.max(0, (schoolRequests[school] || 0) - issued)
     })).filter((item) => item.totalRequests > 0 || specificSchools.includes(item.school))
 
     const totalAccounts = report.reduce((sum, item) => sum + item.issued, 0)
+    const totalLoggedIn = report.reduce((sum, item) => sum + item.loggedIn, 0)
 
     return Response.json({
       success: true,
@@ -58,6 +70,7 @@ export async function GET() {
       summary: {
         totalSchools: report.length,
         totalAccounts,
+        totalLoggedIn,
       },
     })
   } catch (error) {
