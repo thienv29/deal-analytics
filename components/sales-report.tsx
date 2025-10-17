@@ -1,8 +1,10 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Input } from '@/components/ui/input'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 
 
 interface SalesReport {
@@ -27,6 +29,7 @@ export function SalesReport() {
   const [data, setData] = useState<ReportData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [searchTerm, setSearchTerm] = useState('')
 
   useEffect(() => {
     fetch('/api/reports/sales')
@@ -40,6 +43,13 @@ export function SalesReport() {
         setIsLoading(false)
       })
   }, [])
+
+  const filteredData = useMemo(() => {
+    if (!data) return []
+    return data.data.filter(item =>
+      item.school.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+  }, [data, searchTerm])
 
   if (isLoading) {
     return (
@@ -108,6 +118,57 @@ export function SalesReport() {
             <p className="text-xs text-muted-foreground">
               Tổng số tài khoản đã đăng nhập
             </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Tình Trạng Đăng Nhập</CardTitle>
+            <CardDescription>Tỉ lệ tài khoản đã đăng nhập</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={[
+                    { name: 'Đã Đăng Nhập', value: totalLoggedIn, fill: '#10b981' },
+                    { name: 'Chưa Đăng Nhập', value: totalAccounts - totalLoggedIn, fill: '#e5e7eb' }
+                  ]}
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                />
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Số Tài Khoản Đã Cấp Theo Trường</CardTitle>
+            <CardDescription>Top các trường có nhiều tài khoản nhất</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={data.data.slice(0, 10)}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis
+                  dataKey="school"
+                  angle={-45}
+                  textAnchor="end"
+                  height={80}
+                  interval={0}
+                />
+                <YAxis />
+                <Tooltip labelFormatter={(label) => label} />
+                <Bar dataKey="issued" fill="#3b82f6" />
+              </BarChart>
+            </ResponsiveContainer>
           </CardContent>
         </Card>
       </div>
