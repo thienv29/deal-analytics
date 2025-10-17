@@ -1,11 +1,11 @@
 import mysql from 'mysql2/promise'
 
 const dbConfig = {
-  host: 'localhost',
+  host: '103.1.236.212',
   port: 3306,
-  database: 'digischool2',
-  username: 'root',
-  password: '123456',
+  database: 'admin_digilessondb',
+  username: 'admin_digilessondb',
+  password: 'eyqGVVG8PQQSaUYREXQB',
 }
 
 export async function connectToDatabase() {
