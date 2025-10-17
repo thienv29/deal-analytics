@@ -41,13 +41,14 @@ export async function GET() {
       // Continue with 0 requests for all schools
     }
 
-    // Format report data - only include schools that have requests
+    // Format report data - include schools that have requests or specific ones
+    const specificSchools = ["Trần Quốc Tuấn - Phường Bảy Hiền", "Đống Đa - Phường Khánh Hội"]
     const report = Array.from(schoolAccounts.entries()).map(([school, issued]: [string, number]) => ({
       school: school,
       issued: issued,
       totalRequests: schoolRequests[school] || 0,
       unprocessed: Math.max(0, (schoolRequests[school] || 0) - issued)
-    })).filter((item) => item.totalRequests > 0)
+    })).filter((item) => item.totalRequests > 0 || specificSchools.includes(item.school))
 
     const totalAccounts = report.reduce((sum, item) => sum + item.issued, 0)
 
