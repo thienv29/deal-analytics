@@ -1,6 +1,5 @@
 import { connectToDatabase } from '@/lib/db'
 
-
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const school = searchParams.get('school')
@@ -78,7 +77,11 @@ export async function GET(request: Request) {
     // Now fetch deals data from the basic API to correlate
     let schoolRequests: any = {}
     try {
-      const dealsResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/deals/basic`)
+      const dealsResponse = await fetch(
+        `${
+          process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+        }/api/deals/basic`
+      )
       const dealsData = await dealsResponse.json()
 
       if (dealsData.success) {
@@ -99,19 +102,30 @@ export async function GET(request: Request) {
       // Continue with 0 requests for all schools
     }
 
+    console.log('School Requests:', schoolAccounts.size)
     // Format report data - include schools that have requests or specific ones
-    const specificSchools = ["Trần Quốc Tuấn - Phường Bảy Hiền", "Đống Đa - Phường Khánh Hội"]
-    const report = Array.from(schoolAccounts.entries()).map(([school, issued]: [string, number]) => ({
-      school: school,
-      issued: issued,
-      loggedIn: schoolLogins.get(school) || 0,
-      totalRequests: schoolRequests[school] || 0,
-      unprocessed: Math.max(0, (schoolRequests[school] || 0) - issued)
-    })).filter((item) => item.totalRequests > 0 || specificSchools.includes(item.school))
+    const specificSchools = [
+      'Trần Quốc Tuấn - Phường Bảy Hiền',
+      'Đống Đa - Phường Khánh Hội',
+    ]
+    const report = Array.from(schoolAccounts.entries())
+      .map(([school, issued]: [string, number]) => ({
+        school: school,
+        issued: issued,
+        loggedIn: schoolLogins.get(school) || 0,
+        totalRequests: schoolRequests[school] || 0,
+        unprocessed: Math.max(0, (schoolRequests[school] || 0) - issued),
+      }))
+      .filter(
+        (item) =>
+          item.totalRequests > 0 || specificSchools.includes(item.school)
+      )
 
     const totalAccounts = report.reduce((sum, item) => sum + item.issued, 0)
     const totalLoggedIn = report.reduce((sum, item) => sum + item.loggedIn, 0)
     const totalNeverLoggedIn = totalAccounts - totalLoggedIn
+
+    console.log('Report generated with', report.length, 'schools')
 
     return Response.json({
       success: true,
