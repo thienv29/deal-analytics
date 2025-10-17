@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 
 
@@ -14,6 +15,22 @@ interface SalesReport {
   loggedIn: number
   totalRequests: number
   unprocessed: number
+}
+
+interface Student {
+  id: number
+  name: string
+  username: string
+  email: string
+  phone: string
+  class: string
+  createdAt: string
+}
+
+interface StudentsData {
+  success: boolean
+  school: string
+  students: Student[]
 }
 
 interface ReportData {
@@ -31,6 +48,9 @@ export function SalesReport() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
+  const [selectedView, setSelectedView] = useState('Tổng quan')
+  const [studentsData, setStudentsData] = useState<StudentsData | null>(null)
+  const [isStudentsLoading, setIsStudentsLoading] = useState(false)
 
   useEffect(() => {
     fetch('/api/reports/sales')
@@ -44,6 +64,22 @@ export function SalesReport() {
         setIsLoading(false)
       })
   }, [])
+
+  useEffect(() => {
+    if (selectedView !== 'Tổng quan') {
+      setIsStudentsLoading(true)
+      fetch(`/api/reports/sales?school=${encodeURIComponent(selectedView)}`)
+        .then(response => response.json())
+        .then(students => {
+          setStudentsData(students)
+          setIsStudentsLoading(false)
+        })
+        .catch(err => {
+          console.error('Error fetching students:', err)
+          setIsStudentsLoading(false)
+        })
+    }
+  }, [selectedView])
 
   const filteredData = useMemo(() => {
     if (!data) return []
@@ -185,42 +221,98 @@ export function SalesReport() {
         <TabsContent value="list" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Chi Tiết Theo Trường</CardTitle>
-              <CardDescription>
-                Danh sách các trường và số lượng tài khoản đã cấp
-              </CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Chi Tiết Theo Trường</CardTitle>
+                  <CardDescription>
+                    {selectedView === 'Tổng quan' ? 'Danh sách tổng quan các trường' : `Danh sách học viên trường ${selectedView}`}
+                  </CardDescription>
+                </div>
+                <Select value={selectedView} onValueChange={setSelectedView}>
+                  <SelectTrigger className="w-[280px]">
+                    <SelectValue placeholder="Chọn trường" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Tổng quan">Tổng quan</SelectItem>
+                    {data.data.map((item) => (
+                      <SelectItem key={item.school} value={item.school}>
+                        {item.school}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="mb-4">
-                <Input
-                  placeholder="Tìm kiếm trường học..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="max-w-sm"
-                />
-              </div>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Tên Trường</TableHead>
-                    <TableHead className="text-right">Tài Khoản Đã Cấp</TableHead>
-                    <TableHead className="text-right">Đã Đăng Nhập</TableHead>
-                    <TableHead className="text-right">Tổng Yêu Cầu</TableHead>
-                    <TableHead className="text-right">Chưa Xử Lý</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredData.map((item, index) => (
-                    <TableRow key={index}>
-                      <TableCell className="font-medium">{item.school}</TableCell>
-                      <TableCell className="text-right">{item.issued}</TableCell>
-                      <TableCell className="text-right">{item.loggedIn}</TableCell>
-                      <TableCell className="text-right">{item.totalRequests}</TableCell>
-                      <TableCell className="text-right">{item.unprocessed}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              {selectedView === 'Tổng quan' ? (
+                <>
+                  <div className="mb-4">
+                    <Input
+                      placeholder="Tìm kiếm trường học..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="max-w-sm"
+                    />
+                  </div>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Tên Trường</TableHead>
+                        <TableHead className="text-right">Tài Khoản Đã Cấp</TableHead>
+                        <TableHead className="text-right">Đã Đăng Nhập</TableHead>
+                        <TableHead className="text-right">Tổng Yêu Cầu</TableHead>
+                        <TableHead className="text-right">Chưa Xử Lý</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredData.map((item, index) => (
+                        <TableRow key={index}>
+                          <TableCell className="font-medium">{item.school}</TableCell>
+                          <TableCell className="text-right">{item.issued}</TableCell>
+                          <TableCell className="text-right">{item.loggedIn}</TableCell>
+                          <TableCell className="text-right">{item.totalRequests}</TableCell>
+                          <TableCell className="text-right">{item.unprocessed}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </>
+              ) : (
+                <>
+                  {isStudentsLoading ? (
+                    <div className="text-center py-8">Đang tải danh sách học viên...</div>
+                  ) : studentsData && studentsData.success ? (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>ID</TableHead>
+                          <TableHead>Tên</TableHead>
+                          <TableHead>Username</TableHead>
+                          <TableHead>Email</TableHead>
+                          <TableHead>Số Điện Thoại</TableHead>
+                          <TableHead>Lớp</TableHead>
+                          <TableHead>Ngày Tạo</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {studentsData.students.map((student) => (
+                          <TableRow key={student.id}>
+                            <TableCell>{student.id}</TableCell>
+                            <TableCell>{student.name}</TableCell>
+                            <TableCell>{student.username}</TableCell>
+                            <TableCell>{student.email}</TableCell>
+                            <TableCell>{student.phone}</TableCell>
+                            <TableCell>{student.class}</TableCell>
+                            <TableCell>{new Date(student.createdAt).toLocaleDateString('vi-VN')}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  ) : (
+                    <div className="text-center py-8">Không có dữ liệu học viên</div>
+                  )}
+                </>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

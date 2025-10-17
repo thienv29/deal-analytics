@@ -1,6 +1,40 @@
 import { connectToDatabase } from '@/lib/db'
 
-export async function GET() {
+
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url)
+  const school = searchParams.get('school')
+
+  if (school) {
+    // Return students for specific school
+    try {
+      const connection = await connectToDatabase()
+
+      const [users] = await connection.execute(
+        'SELECT id, name, username, email, phone, class, created_at as createdAt FROM users WHERE school = ?',
+        [school]
+      )
+
+      await connection.end()
+
+      return Response.json({
+        success: true,
+        school,
+        students: users,
+      })
+    } catch (error) {
+      console.error('Error fetching school students:', error)
+      return Response.json(
+        {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        },
+        { status: 500 }
+      )
+    }
+  }
+
+  // Standard report logic
   try {
     // Connect to database
     const connection = await connectToDatabase()
