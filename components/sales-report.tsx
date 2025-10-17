@@ -7,7 +7,9 @@ import { Badge } from '@/components/ui/badge'
 
 interface SalesReport {
   school: string
-  accountsIssued: number
+  issued: number
+  totalRequests: number
+  unprocessed: number
 }
 
 interface ReportData {
@@ -108,7 +110,8 @@ export function SalesReport() {
             <TableHeader>
               <TableRow>
                 <TableHead>Tên Trường</TableHead>
-                <TableHead className="text-right">Số Tài Khoản</TableHead>
+                <TableHead className="text-right">Tài Khoản Đã Cấp</TableHead>
+                <TableHead className="text-right">Tổng Yêu Cầu</TableHead>
                 <TableHead className="text-right">Tình Trạng</TableHead>
               </TableRow>
             </TableHeader>
@@ -116,10 +119,11 @@ export function SalesReport() {
               {data.data.map((item, index) => (
                 <TableRow key={index}>
                   <TableCell className="font-medium">{item.school}</TableCell>
-                  <TableCell className="text-right">{item.accountsIssued}</TableCell>
+                  <TableCell className="text-right">{item.issued}</TableCell>
+                  <TableCell className="text-right">{item.totalRequests}</TableCell>
                   <TableCell className="text-right">
-                    <Badge variant={item.accountsIssued > 0 ? "default" : "secondary"}>
-                      {item.accountsIssued > 0 ? "Đã Cấp" : "Chưa Cấp"}
+                    <Badge variant="default">
+                      Đã Cấp: {item.issued}, Chưa Xử Lý: {item.unprocessed}
                     </Badge>
                   </TableCell>
                 </TableRow>
