@@ -38,6 +38,7 @@ export async function GET() {
         "Content-Type": "application/json",
       },
       cache: 'no-store',
+      signal: AbortSignal.timeout(30000), // 30 second timeout
     })
 
     if (!countResponse.ok) {
@@ -75,12 +76,16 @@ export async function GET() {
             "Content-Type": "application/json",
           },
           cache: 'no-store',
+          signal: AbortSignal.timeout(30000), // 30 second timeout for each request
         }).then(async (response) => {
           if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`)
           }
           const data = await response.json()
           return data.result ? data.result.map(mapItem) : []
+        }).catch((error) => {
+          console.error(`Error in request for start=${start}:`, error.message)
+          return [] // Return empty array on error to continue processing
         })
 
         promises.push(promise)
