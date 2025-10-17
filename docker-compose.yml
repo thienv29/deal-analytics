@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  deals-analytics:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3212:3000"
+    environment:
+      - NODE_ENV=production
+      - NEXT_TELEMETRY_DISABLED=1
+    restart: unless-stopped
+    # Uncomment the following lines if you have environment variables file
+    # env_file:
+    #   - .env
