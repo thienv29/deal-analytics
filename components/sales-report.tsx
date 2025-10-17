@@ -51,6 +51,7 @@ export function SalesReport() {
   const [selectedView, setSelectedView] = useState('Tổng quan')
   const [studentsData, setStudentsData] = useState<StudentsData | null>(null)
   const [isStudentsLoading, setIsStudentsLoading] = useState(false)
+  const [studentsSearch, setStudentsSearch] = useState('')
 
   useEffect(() => {
     fetch('/api/reports/sales')
@@ -67,6 +68,7 @@ export function SalesReport() {
 
   useEffect(() => {
     if (selectedView !== 'Tổng quan') {
+      setStudentsSearch('') // Clear search when switching schools
       setIsStudentsLoading(true)
       fetch(`/api/reports/sales?school=${encodeURIComponent(selectedView)}`)
         .then(response => response.json())
@@ -87,6 +89,16 @@ export function SalesReport() {
       item.school.toLowerCase().includes(searchTerm.toLowerCase())
     )
   }, [data, searchTerm])
+
+  const filteredStudents = useMemo(() => {
+    if (!studentsData || !studentsData.success) return []
+    return studentsData.students.filter(student =>
+      student.name.toLowerCase().includes(studentsSearch.toLowerCase()) ||
+      student.username.toLowerCase().includes(studentsSearch.toLowerCase()) ||
+      student.email.toLowerCase().includes(studentsSearch.toLowerCase()) ||
+      student.class.toLowerCase().includes(studentsSearch.toLowerCase())
+    )
+  }, [studentsData, studentsSearch])
 
   if (isLoading) {
     return (
@@ -308,32 +320,42 @@ export function SalesReport() {
                   {isStudentsLoading ? (
                     <div className="text-center py-8">Đang tải danh sách học viên...</div>
                   ) : studentsData && studentsData.success ? (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>ID</TableHead>
-                          <TableHead>Tên</TableHead>
-                          <TableHead>Username</TableHead>
-                          <TableHead>Email</TableHead>
-                          <TableHead>Số Điện Thoại</TableHead>
-                          <TableHead>Lớp</TableHead>
-                          <TableHead>Ngày Tạo</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {studentsData.students.map((student) => (
-                          <TableRow key={student.id}>
-                            <TableCell>{student.id}</TableCell>
-                            <TableCell>{student.name}</TableCell>
-                            <TableCell>{student.username}</TableCell>
-                            <TableCell>{student.email}</TableCell>
-                            <TableCell>{student.phone}</TableCell>
-                            <TableCell>{student.class}</TableCell>
-                            <TableCell>{new Date(student.createdAt).toLocaleDateString('vi-VN')}</TableCell>
+                    <>
+                      <div className="mb-4">
+                        <Input
+                          placeholder="Tìm kiếm học viên (tên, username, email, lớp)..."
+                          value={studentsSearch}
+                          onChange={(e) => setStudentsSearch(e.target.value)}
+                          className="max-w-sm"
+                        />
+                      </div>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>ID</TableHead>
+                            <TableHead>Tên</TableHead>
+                            <TableHead>Username</TableHead>
+                            <TableHead>Email</TableHead>
+                            <TableHead>Số Điện Thoại</TableHead>
+                            <TableHead>Lớp</TableHead>
+                            <TableHead>Ngày Tạo</TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                        </TableHeader>
+                        <TableBody>
+                          {filteredStudents.map((student) => (
+                            <TableRow key={student.id}>
+                              <TableCell>{student.id}</TableCell>
+                              <TableCell>{student.name}</TableCell>
+                              <TableCell>{student.username}</TableCell>
+                              <TableCell>{student.email}</TableCell>
+                              <TableCell>{student.phone}</TableCell>
+                              <TableCell>{student.class}</TableCell>
+                              <TableCell>{new Date(student.createdAt).toLocaleDateString('vi-VN')}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </>
                   ) : (
                     <div className="text-center py-8">Không có dữ liệu học viên</div>
                   )}
