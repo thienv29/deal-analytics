@@ -6,11 +6,14 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "3212:3000"
+      - "3212:3000"  # Map port 3212 on host to port 3000 in container
     environment:
       - NODE_ENV=production
       - NEXT_TELEMETRY_DISABLED=1
     restart: unless-stopped
-    # Uncomment the following lines if you have environment variables file
-    # env_file:
-    #   - .env
+    env_file:
+      - .env  # Load environment variables from .env file
+
+    # Notes:
+    # - App will be accessible at https://deal-analytics.softwarehub.vn
+    # - Make sure to configure reverse proxy/Nginx to forward to port 3212
