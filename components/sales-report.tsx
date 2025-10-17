@@ -25,6 +25,8 @@ interface Student {
   phone: string
   class: string
   createdAt: string
+  login_count: number
+  last_login_at: string | null
 }
 
 interface StudentsData {
@@ -40,6 +42,7 @@ interface ReportData {
     totalSchools: number
     totalAccounts: number
     totalLoggedIn: number
+    totalNeverLoggedIn: number
   }
 }
 
@@ -127,6 +130,7 @@ export function SalesReport() {
   const totalAccounts = data.summary.totalAccounts
   const totalSchools = data.summary.totalSchools
   const totalLoggedIn = data.summary.totalLoggedIn
+  const totalNeverLoggedIn = data.summary.totalNeverLoggedIn
 
   return (
     <div className="space-y-6">
@@ -142,7 +146,7 @@ export function SalesReport() {
         </TabsList>
 
         <TabsContent value="charts" className="space-y-6">
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Tổng Trường Học</CardTitle>
@@ -167,12 +171,23 @@ export function SalesReport() {
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Tổng Tài Khoản Đã Đăng Nhập</CardTitle>
+                <CardTitle className="text-sm font-medium">Tài Khoản Đã Đăng Nhập</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{totalLoggedIn}</div>
                 <p className="text-xs text-muted-foreground">
-                  Tổng số tài khoản đã đăng nhập
+                  Số tài khoản đã đăng nhập ít nhất 1 lần
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Chưa Từng Đăng Nhập</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{totalNeverLoggedIn}</div>
+                <p className="text-xs text-muted-foreground">
+                  Tài khoản chưa đăng nhập lần nào (last_login_ip is null)
                 </p>
               </CardContent>
             </Card>
@@ -338,6 +353,8 @@ export function SalesReport() {
                             <TableHead>Email</TableHead>
                             <TableHead>Số Điện Thoại</TableHead>
                             <TableHead>Lớp</TableHead>
+                            <TableHead>Số Lần Đăng Nhập</TableHead>
+                            <TableHead>Đăng Nhập Cuối</TableHead>
                             <TableHead>Ngày Tạo</TableHead>
                           </TableRow>
                         </TableHeader>
@@ -350,6 +367,8 @@ export function SalesReport() {
                               <TableCell>{student.email}</TableCell>
                               <TableCell>{student.phone}</TableCell>
                               <TableCell>{student.class}</TableCell>
+                              <TableCell className="text-right">{student.login_count}</TableCell>
+                              <TableCell>{student.last_login_at ? new Date(student.last_login_at).toLocaleDateString('vi-VN') : 'Chưa đăng nhập'}</TableCell>
                               <TableCell>{new Date(student.createdAt).toLocaleDateString('vi-VN')}</TableCell>
                             </TableRow>
                           ))}

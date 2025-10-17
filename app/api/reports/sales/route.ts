@@ -11,7 +11,21 @@ export async function GET(request: Request) {
       const connection = await connectToDatabase()
 
       const [users] = await connection.execute(
-        'SELECT id, name, username, email, phone, class, created_at as createdAt FROM users WHERE school = ?',
+        `SELECT
+          u.id, u.name, u.username, u.email, u.phone, u.class, u.created_at as createdAt,
+          u.last_login_ip,
+          COALESCE(ul.login_count, 0) as login_count,
+          ul.last_login_at
+        FROM users u
+        LEFT JOIN (
+          SELECT
+            user_id,
+            COUNT(*) as login_count,
+            MAX(created_at) as last_login_at
+          FROM user_login_logs
+          GROUP BY user_id
+        ) ul ON u.id = ul.user_id
+        WHERE u.school = ?`,
         [school]
       )
 
@@ -97,6 +111,7 @@ export async function GET(request: Request) {
 
     const totalAccounts = report.reduce((sum, item) => sum + item.issued, 0)
     const totalLoggedIn = report.reduce((sum, item) => sum + item.loggedIn, 0)
+    const totalNeverLoggedIn = totalAccounts - totalLoggedIn
 
     return Response.json({
       success: true,
@@ -105,6 +120,7 @@ export async function GET(request: Request) {
         totalSchools: report.length,
         totalAccounts,
         totalLoggedIn,
+        totalNeverLoggedIn,
       },
     })
   } catch (error) {
