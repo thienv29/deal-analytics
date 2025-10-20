@@ -28,6 +28,8 @@ function mapItem(item: any) {
 }
 
 export async function GET() {
+  const { connectToDatabase } = await import('@/lib/db')
+
   try {
     const baseUrl = "https://anhnguiclc.com/rest/1/dcqn591zbut35f5u/crm.deal.list.json"
 
@@ -105,6 +107,39 @@ export async function GET() {
     }
 
     console.log(`[v0] Completed fetching all ${allDeals.length} records with parallel processing`)
+
+    // Now check for account status in database
+    let connection
+    let accountStatusMap = new Map()
+
+    try {
+      connection = await connectToDatabase()
+
+      // Query users with username like 'emaildeal%' to get account status
+    const [accountResults] = await connection.execute(
+      'SELECT username, email FROM users;'
+    );
+
+      // Create a map of email to account status
+      for (const row of accountResults as any[]) {
+        accountStatusMap.set(row.email?.toLowerCase()?.trim(), 'Yes')
+      }
+
+      console.log(`[v0] Found ${accountStatusMap.size} accounts granted`)
+    } catch (dbError) {
+      console.error('[v0] Error querying account status:', dbError)
+      // Continue with empty account status map - no accounts will be marked as granted
+    } finally {
+      if (connection) {
+        await connection.end()
+      }
+    }
+
+    // Add account status to each deal
+    allDeals = allDeals.map(deal => ({
+      ...deal,
+      accountGranted: accountStatusMap.get((deal.email || '').toLowerCase().trim()) ? 'Yes' : 'No'
+    }))
 
     return Response.json({
       success: true,

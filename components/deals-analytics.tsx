@@ -48,6 +48,7 @@ export interface Deal {
   DATE_CREATE?: string
   schoolNameTmp?: string
   isDisabled?: string
+  accountGranted?: string
 }
 
 interface DealsAnalyticsProps {
@@ -484,8 +485,8 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
       }))
       .filter((item: any) => item.total >= 3) // Only show pairs with at least 3 students
       .sort((a, b) => {
-        let aValue: string | number = (a as any)[sortField] as string | number
-        let bValue: string | number = (b as any)[sortField] as string | number
+        let aValue: string | number = (a as any)[sortField] ?? 0
+        let bValue: string | number = (b as any)[sortField] ?? 0
 
         // Convert string numbers to actual numbers for numeric fields
         if (sortField === "duplicateRate") {
@@ -968,7 +969,7 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
                   type="checkbox"
                   id="header-export-summary"
                   checked={exportIncludeSummary}
-                  onChange={(e) => setExportIncludeSummary(e.target.checked)}
+                  onChange={(e) => setExportIncludeSummary(e.target.checked ?? false)}
                   className="w-3 h-3 text-blue-600 rounded focus:ring-2 focus:ring-blue-500 mx-1"
                   title="Bảng tổng hợp (không theo bộ lọc hiện tại)"
                 />
@@ -993,14 +994,14 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
 
               {duplicateData.length > 0 && (
                 <div className="flex items-center gap-1 bg-white border rounded-md p-1">
-                  <input
-                    type="checkbox"
-                    id="header-export-duplicates"
-                    checked={exportIncludeDuplicates}
-                    onChange={(e) => setExportIncludeDuplicates(e.target.checked)}
-                    className="w-3 h-3 text-blue-600 rounded focus:ring-2 focus:ring-blue-500 mx-1"
-                    title="Danh sách duplicate"
-                  />
+                <input
+                  type="checkbox"
+                  id="header-export-duplicates"
+                  checked={exportIncludeDuplicates}
+                  onChange={(e) => setExportIncludeDuplicates(e.target.checked ?? false)}
+                  className="w-3 h-3 text-blue-600 rounded focus:ring-2 focus:ring-blue-500 mx-1"
+                  title="Danh sách duplicate"
+                />
                   <label htmlFor="header-export-duplicates" className="text-xs cursor-pointer select-none">
                     Duplicate
                   </label>
@@ -1652,6 +1653,7 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
                         {renderTableSortableHeader("schoolName", "Trường")}
                         {renderTableSortableHeader("ward", "Phường/Quận")}
                         {renderTableSortableHeader("schoolNameTmp", "Trường (PH tự nhập)")}
+                        <th className="text-left p-2 font-medium">Trạng thái tài khoản</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1667,6 +1669,17 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
                           <td className="p-2 text-sm">{deal.schoolName || "-"}</td>
                           <td className="p-2 text-sm">{deal.ward || "-"}</td>
                           <td className="p-2 text-sm">{deal.schoolNameTmp || "-"}</td>
+                          <td className="p-2 text-sm">
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              deal.accountGranted === "Yes"
+                                ? "bg-green-100 text-green-800"
+                                : deal.accountGranted === "No"
+                                  ? "bg-red-100 text-red-800"
+                                  : "bg-gray-100 text-gray-800"
+                            }`}>
+                              {deal.accountGranted || "Chưa xác định"}
+                            </span>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -1743,7 +1756,7 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
                       <div className="flex items-center gap-2 bg-white border rounded-md px-2 py-1">
                         <span className="text-xs font-medium text-gray-700">Hiển thị:</span>
                         <Select
-                          value={duplicateDisplayGrouped ? "true" : "false"}
+                          value={duplicateDisplayGrouped.toString()}
                           onValueChange={(value) => setDuplicateDisplayGrouped(value === "true")}
                         >
                           <SelectTrigger className="w-32 h-7 text-xs">
@@ -1759,7 +1772,7 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
                       <div className="flex items-center gap-2 bg-white border rounded-md px-2 py-1">
                         <span className="text-xs font-medium text-gray-700">Xuất:</span>
                         <Select
-                          value={duplicateExportGrouped ? "true" : "false"}
+                          value={duplicateExportGrouped.toString()}
                           onValueChange={(value) => setDuplicateExportGrouped(value === "true")}
                         >
                           <SelectTrigger className="w-36 h-7 text-xs">
@@ -1870,12 +1883,13 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
                                     <th className="text-left p-2 font-medium text-sm">Tên phụ huynh</th>
                                     <th className="text-left p-2 font-medium text-sm">Khối</th>
                                     <th className="text-left p-2 font-medium text-sm">Lớp</th>
-                                    <th className="text-left p-2 font-medium text-sm">Phone</th>
-                                    <th className="text-left p-2 font-medium text-sm">Email</th>
-                                    <th className="text-left p-2 font-medium text-sm">Trường</th>
-                                    <th className="text-left p-2 font-medium text-sm">Phường/Quận</th>
-                                    <th className="text-left p-2 font-medium text-sm">Ngày tạo</th>
-                                    <th className="text-center p-2 font-medium text-sm">Vô hiệu hóa</th>
+                              <th className="text-left p-2 font-medium text-sm">Phone</th>
+                              <th className="text-left p-2 font-medium text-sm">Email</th>
+                              <th className="text-left p-2 font-medium text-sm">Trường</th>
+                              <th className="text-left p-2 font-medium text-sm">Phường/Quận</th>
+                              <th className="text-left p-2 font-medium text-sm">Ngày tạo</th>
+                              <th className="text-left p-2 font-medium text-sm">Trạng thái tài khoản</th>
+                              <th className="text-center p-2 font-medium text-sm">Vô hiệu hóa</th>
                                   </tr>
                                 </thead>
                                 <tbody>
@@ -1891,6 +1905,17 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
                                       <td className="p-2 text-sm">{deal.schoolName || "-"}</td>
                                       <td className="p-2 text-sm">{deal.ward || "-"}</td>
                                       <td className="p-2 text-sm">{deal.DATE_CREATE ? new Date(deal.DATE_CREATE).toLocaleDateString('vi-VN') : "-"}</td>
+                                      <td className="p-2 text-sm">
+                                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                          deal.accountGranted === "Yes"
+                                            ? "bg-green-100 text-green-800"
+                                            : deal.accountGranted === "No"
+                                              ? "bg-red-100 text-red-800"
+                                              : "bg-gray-100 text-gray-800"
+                                        }`}>
+                                          {deal.accountGranted || "Chưa xác định"}
+                                        </span>
+                                      </td>
                                       <td className="p-2 text-center">
                                         <Button
                                           variant="outline"
@@ -1927,6 +1952,7 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
                               <th className="text-left p-3 font-medium">Trường</th>
                               <th className="text-left p-3 font-medium">Phường/Quận</th>
                               <th className="text-left p-3 font-medium">Ngày tạo</th>
+                              <th className="text-left p-3 font-medium">Trạng thái tài khoản</th>
                               <th className="text-center p-3 font-medium">Vô hiệu hóa</th>
                             </tr>
                           </thead>
@@ -1956,6 +1982,17 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
                                   <td className="p-3 text-sm">{deal.schoolName || "-"}</td>
                                   <td className="p-3 text-sm">{deal.ward || "-"}</td>
                                   <td className="p-3 text-sm">{deal.DATE_CREATE ? new Date(deal.DATE_CREATE).toLocaleDateString('vi-VN') : "-"}</td>
+                                  <td className="p-3 text-sm">
+                                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                      deal.accountGranted === "Yes"
+                                        ? "bg-green-100 text-green-800"
+                                        : deal.accountGranted === "No"
+                                          ? "bg-red-100 text-red-800"
+                                          : "bg-gray-100 text-gray-800"
+                                    }`}>
+                                      {deal.accountGranted || "Chưa xác định"}
+                                    </span>
+                                  </td>
                                   <td className="p-3 text-center">
                                     <Button
                                       variant="outline"
