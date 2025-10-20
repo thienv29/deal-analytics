@@ -99,7 +99,7 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc")
 
   const [tableSortField, setTableSortField] = useState<
-    "ID" | "studentName" | "parentOfStudentName" | "grade" | "className" | "email" | "phone" | "schoolName" | "ward" | "schoolNameTmp"
+    "ID" | "studentName" | "parentOfStudentName" | "grade" | "className" | "email" | "phone" | "schoolName" | "ward" | "schoolNameTmp" | "accountGranted"
   >("ID")
   const [tableSortDirection, setTableSortDirection] = useState<"asc" | "desc">("asc")
 
@@ -338,8 +338,8 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
 
   const sortedFilteredDeals = useMemo(() => {
     const sorted = [...filteredDeals].sort((a, b) => {
-      let aValue = a[tableSortField] || ""
-      let bValue = b[tableSortField] || ""
+      let aValue = (a as any)[tableSortField] || ""
+      let bValue = (b as any)[tableSortField] || ""
 
       // Convert to lowercase for string comparison
       if (typeof aValue === "string") aValue = aValue.toLowerCase()
@@ -1653,7 +1653,7 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
                         {renderTableSortableHeader("schoolName", "Trường")}
                         {renderTableSortableHeader("ward", "Phường/Quận")}
                         {renderTableSortableHeader("schoolNameTmp", "Trường (PH tự nhập)")}
-                        <th className="text-left p-2 font-medium">Trạng thái tài khoản</th>
+                        {renderTableSortableHeader("accountGranted", "Trạng thái tài khoản")}
                       </tr>
                     </thead>
                     <tbody>
@@ -1757,7 +1757,7 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
                         <span className="text-xs font-medium text-gray-700">Hiển thị:</span>
                         <Select
                           value={duplicateDisplayGrouped.toString()}
-                          onValueChange={(value) => setDuplicateDisplayGrouped(value === "true")}
+                          onValueChange={(value) => setDuplicateDisplayGrouped(Boolean(value === "true"))}
                         >
                           <SelectTrigger className="w-32 h-7 text-xs">
                             <SelectValue />
@@ -1773,7 +1773,7 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
                         <span className="text-xs font-medium text-gray-700">Xuất:</span>
                         <Select
                           value={duplicateExportGrouped.toString()}
-                          onValueChange={(value) => setDuplicateExportGrouped(value === "true")}
+                          onValueChange={(value) => setDuplicateExportGrouped(Boolean(value === "true"))}
                         >
                           <SelectTrigger className="w-36 h-7 text-xs">
                             <SelectValue />
