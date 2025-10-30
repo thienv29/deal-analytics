@@ -895,187 +895,45 @@ const exportArrayToCSV = (data: any[], filename: string) => {
   document.body.removeChild(link)
 }
 
-export const exportTemplate = (filteredDeals: Deal[]) => {
+export const exportTemplate = async (filteredDeals: Deal[]) => {
   if (filteredDeals.length === 0) return
 
-  // Curriculum mapping: school-ward -> "cũ" or "mới"
-  const curriculumMap: Record<string, 'cũ' | 'mới'> = {
-    'Hòa Bình-Sài Gòn': 'cũ',
-    'Lê Ngọc Hân-Bến Thành': 'cũ',
-    'Đinh Tiên Hoàng-Tân Định': 'mới',
-    'Nguyễn Thái Bình-Bến Thành': 'mới',
-    'Nguyễn Sơn Hà-Bàn Cờ': 'mới',
-    'Nguyễn Thái Bình-Xóm Chiếu': 'cũ',
-    'Đống Đa-Khánh Hội': 'cũ',
-    'Phú Định-Bình Phú': 'cũ',
-    'Chi Lăng-Thông Tây Hội': 'cũ',
-    'An Hội-Thông Tây Hội': 'cũ',
-    'Nguyễn Viết Xuân-An Nhơn': 'cũ',
-    'Lê Quý Đôn-An Hội Tây': 'mới',
-    'Hoàng Văn Thụ-An Nhơn': 'cũ',
-    'Nguyễn Thị Minh Khai-Thông Tây Hội': 'cũ',
-    'Phạm Ngũ Lão-Hạnh Thông': 'cũ',
-    'Lê Thị Hồng Gấm-An Hội Tây': 'mới',
-    'Kim Đồng-Gò Vấp': 'mới',
-    'Lê Hoàn-An Hội Đông': 'mới',
-    'Võ Thị Sáu-An Hội Đông': 'cũ',
-    'Hanh Thông-Hạnh Thông': 'mới',
-    'Đặng Thùy Trâm-An Hội Tây': 'mới',
-    'Nguyễn Thượng Hiền-Hạnh Thông': 'mới',
-    'Phan Chu Trinh-An Hội Đông': 'mới',
-    'Lê Đức Thọ-An Hội Đông': 'cũ',
-    'Hoàng Văn Thụ-Tân Sơn Nhất': 'mới',
-    'Chi Lăng-Tân Hòa': 'cũ',
-    'Lê Văn Sĩ-Tân Sơn Hòa': 'cũ',
-    'Bành Văn Trân-Tân Sơn Nhất': 'mới',
-    'Lê Thị Hồng Gấm-Bảy Hiền': 'cũ',
-    'Trần Quốc Tuấn-Bảy Hiền': 'cũ',
-    'Trường Thạnh-Long Phước': 'mới',
-    'Linh Chiểu-Thủ Đức': 'cũ',
-    'Đặng Văn Bất-Hiệp Bình': 'mới',
-    'Nguyễn Thị Tư-An Khánh': 'cũ',
-    'Giồng Ông Tố-Bình Trưng': 'mới'
-  }
-
-  // Step 1: Remove ALL entries that have duplicates based on email + student name combination
-  const comboCounts: Record<string, number> = {}
-  const comboDeals: Record<string, Deal[]> = {}
-
-  // First pass: count occurrences and group deals
-  for (const deal of filteredDeals) {
-    const normalizedEmail = (deal.email || "").toLowerCase().trim()
-    const studentName = deal.studentName ? normalizeTextForDuplicates(toTitleCase(deal.studentName)) : ""
-
-    // Skip if both email and student name are empty
-    if (!normalizedEmail && !studentName) continue
-
-    // Create unique key from email + student name combination
-    const comboKey = `${normalizedEmail}:::${studentName}`
-
-    comboCounts[comboKey] = (comboCounts[comboKey] || 0) + 1
-    if (!comboDeals[comboKey]) comboDeals[comboKey] = []
-    comboDeals[comboKey].push(deal)
-  }
-
-  // Second pass: only keep deals that have unique combinations (no duplicates)
-  const uniqueDeals = []
-  for (const [comboKey, count] of Object.entries(comboCounts)) {
-    if (count === 1) {
-      // Only include if this combination appears exactly once
-      uniqueDeals.push(...comboDeals[comboKey])
-    }
-    // Skip all combinations that appear more than once (duplicates)
-  }
-
-  // Step 2: Count email occurrences to determine which ones need numbering
-  const emailOccurrenceCount: Record<string, number> = {}
-  uniqueDeals.forEach(deal => {
-    const normalizedEmail = (deal.email || "").toLowerCase().trim()
-    if (normalizedEmail) {
-      emailOccurrenceCount[normalizedEmail] = (emailOccurrenceCount[normalizedEmail] || 0) + 1
-    }
+  // Call the API endpoint to handle the export with database checking
+  const response = await fetch('/api/deals/template', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ deals: filteredDeals }),
   })
 
-  // Step 3: Sort unique deals by email
-  const sortedDeals = uniqueDeals.sort((a, b) => {
-    const emailA = (a.email || "").toLowerCase().trim()
-    const emailB = (b.email || "").toLowerCase().trim()
+  if (!response.ok) {
+    console.error('Failed to export template:', response.statusText)
+    return
+  }
 
-    if (!emailA && !emailB) return 0
-    if (!emailA) return 1  // Empty emails come after
-    if (!emailB) return -1 // Empty emails come after
+  // Trigger download of the generated file
+  const blob = await response.blob()
+  const url = window.URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
 
-    return emailA.localeCompare(emailB)
-  })
-
-  // Step 4: Create username counters for emails that appear multiple times (start at 0)
-  const emailCounters: Record<string, number> = {}
-
-  const excelData = sortedDeals.map((deal, index) => {
-    const email = deal.email || ""
-    const normalizedEmail = email.toLowerCase().trim()
-
-    let username = email
-
-    // Only add numbering for subsequent occurrences (2nd, 3rd, etc.)
-    if (normalizedEmail && emailOccurrenceCount[normalizedEmail] > 1) {
-      // Increment counter (starts at undefined, becomes 1 for first occurrence, 2 for second, etc.)
-      emailCounters[normalizedEmail] = (emailCounters[normalizedEmail] || 0) + 1
-
-      // If this is not the first occurrence (counter > 1), add the number
-      if (emailCounters[normalizedEmail] > 1) {
-        username = `${email}${emailCounters[normalizedEmail]}`
-      }
-      // If counter === 1, use email without number (first occurrence)
+  // Extract filename from response headers
+  const contentDisposition = response.headers.get('Content-Disposition')
+  let filename = 'template-export.xlsx'
+  if (contentDisposition) {
+    const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/)
+    if (filenameMatch && filenameMatch[1]) {
+      filename = filenameMatch[1].replace(/['"]/g, '')
     }
+  }
 
-    // Determine curriculum type based on school-ward combination
-    const schoolKey = deal.schoolName || ""
-    const wardKey = deal.ward?.split('Phường ')[1] || ""
-    const mapKey = `${schoolKey}-${wardKey}`
-    const curriculumType = curriculumMap[mapKey] // Leave empty if not found
-
-    // Get grade number (assume grade is like "10", "11", "12" or "10 A", "11 B" etc.)
-    let gradeNumber = deal.grade?.split(" ")[1]
-    // Generate course name based on curriculum type
-    let courseName = ""
-    if (curriculumType === 'cũ') {
-      courseName = `Tiếng Anh Toán - Khoa học thực nghiệm (khối ${gradeNumber})`
-    } else if (curriculumType === 'mới') {
-      courseName = `Tiếng Anh Toán - Khoa học thực nghiệm (k${gradeNumber})`
-    }
-    // If curriculumType is undefined (not mapped), courseName remains empty string
-
-    return {
-      "STT": "", // Leave STT column empty as requested
-      "id": "",
-      "Họ tên bé": toTitleCase(deal.studentName) || "",
-      "Tên đăng nhập": username,
-      "Email": deal.email || "",
-      "Số điện thoại": normalizeVietnamPhone(deal.phone) || "",
-      "Mật khẩu": "iclc2025", // Empty by default - passwords not available
-      "Giới tính (1 - nam / 2- nữ / 3 khác)": "3", // Default empty - gender not in Deal model
-      "Kích hoạt": deal.isDisabled === "1" ? "0" : "1", // 1 = activated (not disabled), 0 = deactivated (disabled)
-      "Cấm tài khoản": deal.isDisabled === "1" ? "1" : "0", // 1 = banned (disabled), 0 = not banned (active)
-      "Tên người liên hệ": toTitleCase(deal.parentOfStudentName) || "",
-      "Trường": (deal.schoolName || "") + " - " + (deal.ward || ""),
-      "Lớp": deal.className || "",
-      "Nhóm": "FTDP, tih-" + removeVietnameseTones(deal.schoolName+ ' ' + deal.ward) + ", TKTC", // Default empty - no group field in Deal model
-      "Khóa học": courseName,
-    }
-  }) as Record<string, any>[]
-
-  // Create worksheet
-  const ws = XLSX.utils.json_to_sheet(excelData)
-
-  // Set column widths
-  const colWidths = [
-    { wch: 6 }, // STT
-    { wch: 15 }, // id
-    { wch: 25 }, // Họ tên bé
-    { wch: 30 }, // Tên đăng nhập
-    { wch: 30 }, // Email
-    { wch: 15 }, // Số điện thoại
-    { wch: 15 }, // Mật khẩu
-    { wch: 30 }, // Giới tính
-    { wch: 10 }, // Kích hoạt
-    { wch: 15 }, // Cấm tài khoản
-    { wch: 25 }, // Tên người liên hệ
-    { wch: 25 }, // Trường
-    { wch: 15 }, // Lớp
-    { wch: 15 }, // Nhóm
-    { wch: 15 }, // Khóa học
-  ]
-  ws['!cols'] = colWidths
-
-  // Create workbook
-  const wb = XLSX.utils.book_new()
-  styleTemplateSheetWithHighlights(ws, sortedDeals, curriculumMap);
-  XLSX.utils.book_append_sheet(wb, ws, "Template Export")
-
-  // Generate and download file
-  const fileName = `template-export-${new Date().toISOString().split("T")[0]}.xlsx`
-  XLSX.writeFile(wb, fileName)
+  link.download = filename
+  link.style.display = 'none'
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  window.URL.revokeObjectURL(url)
 }
 
 export const exportMultiSheetExcel = (
