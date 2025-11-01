@@ -6,7 +6,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Button } from '@/components/ui/button'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, ComposedChart, Line } from 'recharts'
+import * as XLSX from 'sheetjs-style'
 
 
 interface SalesReport {
@@ -102,6 +104,151 @@ export function SalesReport() {
       (student.class || "").toLowerCase().includes(studentsSearch.toLowerCase())
     )
   }, [studentsData, studentsSearch])
+
+  // Format date function for Vietnam timezone
+  const formatVietnamDateTime = (dateString?: string): string => {
+    if (!dateString) return ""
+    try {
+      const date = new Date(dateString)
+      return date.toLocaleString('vi-VN', {
+        timeZone: 'Asia/Ho_Chi_Minh',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      })
+    } catch (error) {
+      return dateString
+    }
+  }
+
+  // Export schools data to Excel
+  const exportSchoolsToExcel = () => {
+    if (!filteredData || filteredData.length === 0) return
+
+    const excelData = filteredData.map((item, index) => ({
+      "STT": index + 1,
+      "Tên Trường": item.school || "",
+      "Tài Khoản Đã Cấp": item.issued || 0,
+      "Đã Đăng Nhập": item.loggedIn || 0,
+      "Tổng Yêu Cầu": item.totalRequests || 0,
+      "Chưa Xử Lý": item.unprocessed || 0,
+    })) as Record<string, string | number>[]
+
+    const ws = XLSX.utils.json_to_sheet(excelData)
+
+    const colWidths = [
+      { wch: 6 }, // STT
+      { wch: 25 }, // Tên Trường
+      { wch: 15 }, // Tài Khoản Đã Cấp
+      { wch: 12 }, // Đã Đăng Nhập
+      { wch: 12 }, // Tổng Yêu Cầu
+      { wch: 12 }, // Chưa Xử Lý
+    ]
+    ws['!cols'] = colWidths
+
+    // Style the sheet
+    styleSheetHeaderAndBorder(ws)
+
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, "Danh sách trường học")
+
+    const fileName = `bao-cao-truong-hoc-${new Date().toISOString().split("T")[0]}.xlsx`
+    XLSX.writeFile(wb, fileName)
+  }
+
+  // Export students data to Excel
+  const exportStudentsToExcel = () => {
+    if (!filteredStudents || filteredStudents.length === 0) return
+
+    const excelData = filteredStudents.map((student) => ({
+      "ID": student.id || "",
+      "Tên": student.name || "",
+      "Username": student.username || "",
+      "Email": student.email || "",
+      "Số Điện Thoại": student.phone || "",
+      "Lớp": student.class || "",
+      "Số Lần Đăng Nhập": student.login_count || 0,
+      "Đăng Nhập Cuối": student.last_login_at ? formatVietnamDateTime(student.last_login_at) : "Chưa đăng nhập",
+      "Ngày Tạo": formatVietnamDateTime(student.createdAt),
+    })) as Record<string, string | number>[]
+
+    const ws = XLSX.utils.json_to_sheet(excelData)
+
+    const colWidths = [
+      { wch: 10 }, // ID
+      { wch: 20 }, // Tên
+      { wch: 20 }, // Username
+      { wch: 30 }, // Email
+      { wch: 15 }, // Số Điện Thoại
+      { wch: 15 }, // Lớp
+      { wch: 15 }, // Số Lần Đăng Nhập
+      { wch: 20 }, // Đăng Nhập Cuối
+      { wch: 20 }, // Ngày Tạo
+    ]
+    ws['!cols'] = colWidths
+
+    // Style the sheet
+    styleSheetHeaderAndBorder(ws)
+
+    const wb = XLSX.utils.book_new()
+    const sheetName = `Học viên ${selectedView}`.substring(0, 31) // Excel sheet names max 31 chars
+    XLSX.utils.book_append_sheet(wb, ws, sheetName)
+
+    const fileName = `danh-sach-hoc-vien-${selectedView}-${new Date().toISOString().split("T")[0]}.xlsx`
+      .replace(/[^a-z0-9\-_.]/gi, '_')
+    XLSX.writeFile(wb, fileName)
+  }
+
+  // Helper function to style sheet header and border (copied from export-utils)
+  const styleSheetHeaderAndBorder = (ws: XLSX.WorkSheet) => {
+    if (!ws["!ref"]) return ws
+
+    const range = XLSX.utils.decode_range(ws["!ref"])
+    const headerRow = range.s.r
+
+    const purpleFill = {
+      patternType: "solid",
+      fgColor: { rgb: "800080" },
+    }
+    const whiteFont = { color: { rgb: "FFFFFF" }, bold: true }
+    const thinBorder = {
+      top: { style: "thin", color: { auto: 1 } },
+      bottom: { style: "thin", color: { auto: 1 } },
+      left: { style: "thin", color: { auto: 1 } },
+      right: { style: "thin", color: { auto: 1 } },
+    }
+
+    // Header
+    for (let C = range.s.c; C <= range.e.c; ++C) {
+      const cellAddress = XLSX.utils.encode_cell({ r: headerRow, c: C })
+      const cell = ws[cellAddress]
+      if (cell) {
+        cell.s = {
+          fill: purpleFill,
+          font: whiteFont,
+          border: thinBorder,
+          alignment: { horizontal: "center", vertical: "center" },
+        }
+      }
+    }
+
+    // Các ô còn lại: border
+    for (let R = headerRow + 1; R <= range.e.r; ++R) {
+      for (let C = range.s.c; C <= range.e.c; ++C) {
+        const cellAddress = XLSX.utils.encode_cell({ r: R, c: C })
+        const cell = ws[cellAddress]
+        if (cell) {
+          // nếu cell đã có style header thì merge, còn lại chỉ border
+          cell.s = { ...(cell.s || {}), border: thinBorder }
+        }
+      }
+    }
+
+    return ws
+  }
 
   if (isLoading) {
     return (
@@ -281,10 +428,18 @@ export function SalesReport() {
                     {selectedView === 'Tổng quan' ? 'Danh sách tổng quan các trường' : `Danh sách học viên trường ${selectedView}`}
                   </CardDescription>
                 </div>
-                <Select value={selectedView} onValueChange={setSelectedView}>
-                  <SelectTrigger className="w-[280px]">
-                    <SelectValue placeholder="Chọn trường" />
-                  </SelectTrigger>
+                <div className="flex items-center gap-4">
+                  <Button
+                    onClick={selectedView === 'Tổng quan' ? exportSchoolsToExcel : exportStudentsToExcel}
+                    disabled={(selectedView === 'Tổng quan' ? filteredData : filteredStudents)?.length === 0}
+                    variant="outline"
+                  >
+                    Xuất Excel
+                  </Button>
+                  <Select value={selectedView} onValueChange={setSelectedView}>
+                    <SelectTrigger className="w-[280px]">
+                      <SelectValue placeholder="Chọn trường" />
+                    </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Tổng quan">Tổng quan</SelectItem>
                     {data.data.map((item) => (
@@ -294,6 +449,7 @@ export function SalesReport() {
                     ))}
                   </SelectContent>
                 </Select>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
