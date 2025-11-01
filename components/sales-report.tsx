@@ -89,17 +89,17 @@ export function SalesReport() {
   const filteredData = useMemo(() => {
     if (!data) return []
     return data.data.filter(item =>
-      item.school.toLowerCase().includes(searchTerm.toLowerCase())
+      (item.school || "").toLowerCase().includes(searchTerm.toLowerCase())
     )
   }, [data, searchTerm])
 
   const filteredStudents = useMemo(() => {
     if (!studentsData || !studentsData.success) return []
     return studentsData.students.filter(student =>
-      student.name.toLowerCase().includes(studentsSearch.toLowerCase()) ||
-      student.username.toLowerCase().includes(studentsSearch.toLowerCase()) ||
-      student.email.toLowerCase().includes(studentsSearch.toLowerCase()) ||
-      student.class.toLowerCase().includes(studentsSearch.toLowerCase())
+      (student.name || "").toLowerCase().includes(studentsSearch.toLowerCase()) ||
+      (student.username || "").toLowerCase().includes(studentsSearch.toLowerCase()) ||
+      (student.email || "").toLowerCase().includes(studentsSearch.toLowerCase()) ||
+      (student.class || "").toLowerCase().includes(studentsSearch.toLowerCase())
     )
   }, [studentsData, studentsSearch])
 

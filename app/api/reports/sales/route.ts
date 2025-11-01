@@ -107,8 +107,7 @@ export async function GET(request: Request) {
     const specificSchools = [
       'Trần Quốc Tuấn - Phường Bảy Hiền',
       'Đống Đa - Phường Khánh Hội',
-      'Chi Lăng - Phường Tân Hòa',
-      'Nguyễn Sơn Hà - Phường Bàn Cờ'
+      'Chi Lăng - Phường Tân Hòa'
     ]
     const report = Array.from(schoolAccounts.entries())
       .map(([school, issued]: [string, number]) => ({
