@@ -18,10 +18,14 @@ const fieldMap = {
 function mapItem(item: any) {
   const out: any = {}
   for (const k in item) {
+    const value = item[k]
+    // Normalize string values to prevent unicode comparison issues
+    const mappedValue = typeof value === "string" ? value.normalize("NFC") : value
+
     if (fieldMap[k as keyof typeof fieldMap]) {
-      out[fieldMap[k as keyof typeof fieldMap]] = item[k]
+      out[fieldMap[k as keyof typeof fieldMap]] = mappedValue
     } else {
-      out[k] = item[k]
+      out[k] = mappedValue
     }
   }
   return out

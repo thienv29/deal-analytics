@@ -121,7 +121,11 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
     const schools = Array.from(new Set(deals.map((d) => d.schoolName).filter(Boolean))).sort()
     const wards = Array.from(new Set(deals.map((d) => d.ward).filter(Boolean))).sort()
     const schoolWardPairs = Array.from(
-      new Set(deals.filter((d) => d.schoolName && d.ward).map((d) => `${d.schoolName} - ${d.ward}`)),
+      new Set(
+        deals
+          .filter((d) => d.schoolName && d.ward)
+          .map((d) => `${d.schoolName} - ${d.ward}`),
+      ),
     ).sort()
 
     return { grades, schools, wards, schoolWardPairs }
@@ -154,8 +158,11 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
     }
 
     if (schoolWardPairFilter && schoolWardPairFilter !== "all") {
-      const [selectedSchool, selectedWard] = schoolWardPairFilter.split(" - ")
-      filtered = filtered.filter((deal) => deal.schoolName === selectedSchool && deal.ward === selectedWard)
+      filtered = filtered.filter((deal) => {
+        if (!deal.schoolName || !deal.ward) return false
+        const currentPair = `${deal.schoolName} - ${deal.ward}`
+        return currentPair === schoolWardPairFilter
+      })
     } else {
       if (schoolFilter && schoolFilter !== "all") {
         filtered = filtered.filter((deal) => deal.schoolName === schoolFilter)
@@ -503,8 +510,8 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
 
     return {
       gradeData: Object.entries(analytics.gradeStats)
-        .map(([grade, count]) => ({ name: grade, value: count }))
-        .sort((a, b: any) => b.value - a.value)
+        .map(([grade, count]) => ({ name: grade, value: count as number }))
+        .sort((a, b) => b.value - a.value)
         .slice(0, 10),
       contactData: [
         { name: "Có thông tin liên hệ", value: contactCount, fill: "#82ca9d" },
@@ -968,7 +975,7 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
                 <input
                   type="checkbox"
                   id="header-export-summary"
-                  checked={exportIncludeSummary}
+                  checked={!!exportIncludeSummary}
                   onChange={(e) => setExportIncludeSummary(e.target.checked ?? false)}
                   className="w-3 h-3 text-blue-600 rounded focus:ring-2 focus:ring-blue-500 mx-1"
                   title="Bảng tổng hợp (không theo bộ lọc hiện tại)"
@@ -982,7 +989,7 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
                 <input
                   type="checkbox"
                   id="header-export-deals"
-                  checked={exportIncludeDeals}
+                  checked={!!exportIncludeDeals}
                   onChange={(e) => setExportIncludeDeals(e.target.checked)}
                   className="w-3 h-3 text-blue-600 rounded focus:ring-2 focus:ring-blue-500 mx-1"
                   title="Danh sách deals hiện tại (đã áp dụng bộ lọc)"
@@ -997,7 +1004,7 @@ export function DealsAnalytics({ onDataLoad }: DealsAnalyticsProps) {
                 <input
                   type="checkbox"
                   id="header-export-duplicates"
-                  checked={exportIncludeDuplicates}
+                  checked={!!exportIncludeDuplicates}
                   onChange={(e) => setExportIncludeDuplicates(e.target.checked ?? false)}
                   className="w-3 h-3 text-blue-600 rounded focus:ring-2 focus:ring-blue-500 mx-1"
                   title="Danh sách duplicate"
